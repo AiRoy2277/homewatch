@@ -313,17 +313,17 @@ input:focus,select:focus{outline:0;border-color:var(--blue);
 .card-h h3{margin:0}
 
 /* 指标条：一行铺满，不再掉行 */
-.kpis{grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.kpis{grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:14px}
 .kpi{padding:9px 11px;border-radius:var(--r)}
 .kpi .v{font-size:20px;letter-spacing:-.4px;line-height:1.25}
 .kpi .l{font-size:11px;margin-bottom:1px}
 @media(max-width:1180px){.kpis{grid-template-columns:repeat(auto-fit,minmax(104px,1fr))}}
 
 /* 横幅压扁，它只是结论，不需要 60px 高 */
-.banner{padding:9px 13px;font-size:13px;margin-bottom:12px;border-radius:10px}
+.banner{padding:9px 13px;font-size:13px;margin-bottom:14px;border-radius:10px}
 
 /* 时间范围选择条 */
-.rangebar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.rangebar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .rangebar .grp{display:flex;flex-wrap:wrap;gap:4px;padding:3px;border:1px solid var(--line);
  border-radius:9px;background:var(--card)}
 .rangebar .sep2{width:1px;height:18px;background:var(--line);margin:0 3px}
@@ -460,7 +460,7 @@ table.ports .seg button{padding:2px 6px;font-size:11px}
  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .sheet-sub{font-size:12px;color:var(--dim);margin-top:3px;display:flex;align-items:center;
  gap:8px;flex-wrap:wrap}
-.sheet-b{padding:14px 18px 18px;overflow-y:auto;flex:1}
+.sheet-b{padding:14px 18px 18px;overflow-y:auto;overflow-x:auto;flex:1}
 .sheet-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
  padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
  background:var(--card)}
@@ -744,7 +744,7 @@ table.fw td{vertical-align:middle}
         </div>
         <svg class="chart" id="chart" viewBox="0 0 900 210" preserveAspectRatio="none"></svg>
         <div class="ch-x" id="chartX"></div>
-        <div class="legend" style="padding-left:6px">
+        <div class="legend">
           <span><i style="background:var(--red)"></i>被拦截</span>
           <span><i style="background:var(--blue)"></i>正常访问</span>
         </div>
@@ -808,17 +808,17 @@ table.fw td{vertical-align:middle}
     <div class="cols c-55">
       <div class="card">
         <h3>异常特征</h3>
-        <div id="anomaly"></div>
+        <div class="tablewrap"><div id="anomaly"></div></div>
         <div class="hint">每行下面直接列出打点最多的来源 IP，点 IP 看档案，点行看该类异常的全部来源。超长 URL、超大报文、异常方法/协议、可疑 User-Agent、蜜罐路径；判定线在「策略」页可调，命中后由策略引擎按规则自动封禁。</div>
       </div>
-      <div class="card"><h3>SSH 爆破</h3><div id="ssh"></div></div>
+      <div class="card"><h3>SSH 爆破</h3><div class="tablewrap"><div id="ssh"></div></div></div>
     </div>
     <div class="card">
       <div class="card-h">
         <h3>敏感文件命中</h3>
         <span class="ch-note">已排除 SPA 首页回退，只列真的返回了内容的</span>
       </div>
-      <div id="leak"></div>
+      <div class="tablewrap"><div id="leak"></div></div>
     </div>
     </div>
   </section>
@@ -1083,11 +1083,10 @@ table.fw td{vertical-align:middle}
         <h3>最近操作</h3>
         <span class="ch-note">每次写操作都会落审计日志</span>
       </div>
-      <div id="adm-audit"></div>
+      <div class="tablewrap"><div id="adm-audit"></div></div>
     </div>
     </div>
   </section>
-
   <!-- ================= 策略 ================= -->
   <section id="page-pol" class="hide">
     <div class="pane" data-pane="pol.rule">
@@ -1823,7 +1822,7 @@ function applyRisk(s){
     lk.appendChild(el('div','empty','无。该区间没有任何敏感路径返回过真实内容。'));
   }else{
     const t=el('table');
-    t.appendChild(row(['路径','来源 IP','大小','时间',''],'th',[0,4]));
+    t.appendChild(row(['路径','来源 IP','大小','时间',''],'th',[0,1,4]));
     leaks.forEach(r=>{
       const tr=el('tr');
       tr.appendChild(el('td','p',r.path));
@@ -3874,7 +3873,7 @@ function renderCf(cf,st){
 
   const box2=document.getElementById('cfList');
   box2.innerHTML='';
-  box2.appendChild(row(['IP','备注','创建时间',''],'th'));
+  box2.appendChild(row(['IP','备注','创建时间',''],'th',[1,2]));
   if(!cfRulesCache){
     const tr=el('tr');const td=el('td','empty','点「刷新规则」从 Cloudflare 拉取');td.colSpan=4;tr.appendChild(td);box2.appendChild(tr);
   }else if(!cfRulesCache.length){
@@ -4206,7 +4205,8 @@ function renderBans(bans){
   const box=document.getElementById('pol-bans');box.innerHTML='';
   if(!bans.length){box.appendChild(el('div','empty','还没有封禁记录'));return;}
   const t=el('table');
-  t.appendChild(row(['时间','IP','地区','时长','方式','原因'],'th',[2,3,5]));
+  /* 表头全左对齐：这六列的单元格全是左对齐文本/徽标，默认右对齐表头会错位 */
+  t.appendChild(row(['时间','IP','地区','时长','方式','原因'],'th',[1,2,3,4,5]));
   bans.forEach(b=>{
     const tr=el('tr');
     tr.appendChild(el('td','mono',ts2str(b.ts)));
@@ -4230,7 +4230,7 @@ function renderPolicyResult(res){
   const banned=res.banned||[];
   if(banned.length){
     const t=el('table');t.style.marginTop='8px';
-    t.appendChild(row(['IP','命中','次数','时长','地区','说明'],'th',[4,5]));
+    t.appendChild(row(['IP','命中','次数','时长','地区','说明'],'th',[1,3,4,5]));
     banned.forEach(x=>{
       const tr=el('tr');
       const cIp=el('td');cIp.appendChild(ipSpan(x.ip));tr.appendChild(cIp);
@@ -4241,7 +4241,8 @@ function renderPolicyResult(res){
       tr.appendChild(el('td','geo',x.reason||''));
       t.appendChild(tr);
     });
-    box.appendChild(t);
+    const tw=el('div','tablewrap');tw.appendChild(t);
+    box.appendChild(tw);
   }
   const sk=res.skipped||[];
   if(sk.length){
