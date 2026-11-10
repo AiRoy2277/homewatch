@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.db-journal
+*.db-wal
+config.json
+.sandbox/
+.venv/
+venv/
+.env
+_check.js
+_data.json
+_sim.js
+.preview/
+
+# 打包产物
+dist/
+*.zip

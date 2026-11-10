@@ -1,0 +1,261 @@
+{
+  "title": "HomeWatch",
+  "admin_port": 8088,
+  "ssh_confirm_minutes": 15,
+  "own_ips": [
+    "203.0.113.10",
+    "198.51.100.20",
+    "192.168.1.50"
+  ],
+  "red_threshold_10m": 50,
+  "yellow_threshold_10m": 1,
+  "retention_days": 30,
+  "blocked_status": [
+    402,
+    403,
+    444
+  ],
+  "ssh_unit": "ssh",
+  "paths": {
+    "nginx_log": "/var/log/nginx/access.log",
+    "db": "/var/lib/homewatch/hw.db",
+    "out_dir": "/var/www/homewatch",
+    "config": "/opt/homewatch/config.json",
+    "audit_log": "/var/log/homewatch/audit.log",
+    "nginx_blocklist": "/etc/nginx/conf.d/00-blocklist.conf",
+    "nginx_sites": "/etc/nginx/sites-enabled",
+    "nginx_reply": "/etc/nginx/snippets/blocked-msg.conf",
+    "htpasswd": "/etc/nginx/.htpasswd.homewatch"
+  },
+  "watch_ports": {
+    "ssh": "22",
+    "origin": "8443",
+    "panel": "8088"
+  },
+  "port_labels": {
+    "ssh": "SSH",
+    "origin": "源站",
+    "panel": "面板"
+  },
+  "managed_ports": [
+    {
+      "port": 22,
+      "label": "SSH",
+      "desc": "远程管理"
+    },
+    {
+      "port": 8088,
+      "label": "监控面板",
+      "desc": "本页自身"
+    },
+    {
+      "port": 8443,
+      "label": "源站 HTTPS",
+      "desc": "Cloudflare 回源"
+    }
+  ],
+  "firewall": {
+    "lan_cidrs": [
+      "192.168.1.0/24"
+    ],
+    "rules": [
+      {
+        "port": 22,
+        "allow": "lan",
+        "name": "SSH"
+      },
+      {
+        "port": 8443,
+        "allow": "cf",
+        "name": "源站"
+      },
+      {
+        "port": 8088,
+        "allow": "lan",
+        "name": "面板"
+      }
+    ]
+  },
+  "geo": {
+    "enabled": true,
+    "provider": "auto",
+    "mmdb": "",
+    "max_per_run": 20,
+    "ttl_days": 30
+  },
+  "policy": {
+    "enabled": true,
+    "auto_ban": true,
+    "dry_run": false,
+    "ban_mode": "silent",
+    "silent_log": true,
+    "max_bans_per_run": 3,
+    "max_hours": 720,
+    "repeat_window_hours": 72,
+    "whitelist": [],
+    "limits": {
+      "uri_len": 1024,
+      "req_bytes": 65536,
+      "ua_len": 400
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "trusted_bots": [
+      "googlebot",
+      "bingbot",
+      "baiduspider",
+      "yandex",
+      "applebot",
+      "duckduckbot",
+      "uptimerobot",
+      "pingdom",
+      "statuscake"
+    ],
+    "rules": [
+      {
+        "id": "honeypot",
+        "name": "蜜罐路径",
+        "enabled": true,
+        "source": "honeypot",
+        "window": 3600,
+        "threshold": 1,
+        "hours": 72,
+        "layer": "both"
+      },
+      {
+        "id": "oversize",
+        "name": "超大请求被拒",
+        "enabled": true,
+        "source": "http_reject",
+        "window": 600,
+        "threshold": 1,
+        "hours": 24,
+        "layer": "both"
+      },
+      {
+        "id": "sensitive_probe",
+        "name": "敏感文件探测",
+        "enabled": true,
+        "source": "sensitive",
+        "window": 3600,
+        "threshold": 3,
+        "hours": 48,
+        "layer": "both"
+      },
+      {
+        "id": "ssh_brute",
+        "name": "SSH 爆破",
+        "enabled": true,
+        "source": "ssh_fail",
+        "window": 600,
+        "threshold": 10,
+        "hours": 24,
+        "layer": "nft"
+      },
+      {
+        "id": "ip_rate",
+        "name": "单 IP 高频请求",
+        "enabled": true,
+        "source": "http_total",
+        "window": 120,
+        "threshold": 120,
+        "hours": 12,
+        "layer": "both"
+      },
+      {
+        "id": "http_flood",
+        "name": "拦截洪水",
+        "enabled": true,
+        "source": "http_blocked",
+        "window": 300,
+        "threshold": 120,
+        "hours": 6,
+        "layer": "both"
+      },
+      {
+        "id": "error_flood",
+        "name": "错误响应洪水",
+        "enabled": true,
+        "source": "http_error",
+        "window": 300,
+        "threshold": 200,
+        "hours": 6,
+        "layer": "both"
+      },
+      {
+        "id": "path_crawl",
+        "name": "路径爬取",
+        "enabled": true,
+        "source": "distinct_paths",
+        "window": 300,
+        "threshold": 120,
+        "hours": 6,
+        "layer": "both"
+      },
+      {
+        "id": "long_uri",
+        "name": "超长 URL",
+        "enabled": true,
+        "source": "long_uri",
+        "window": 300,
+        "threshold": 3,
+        "hours": 24,
+        "layer": "both"
+      },
+      {
+        "id": "big_req",
+        "name": "超大请求报文",
+        "enabled": true,
+        "source": "big_req",
+        "window": 300,
+        "threshold": 2,
+        "hours": 24,
+        "layer": "both"
+      },
+      {
+        "id": "bad_method",
+        "name": "异常请求方法",
+        "enabled": true,
+        "source": "bad_method",
+        "window": 300,
+        "threshold": 3,
+        "hours": 24,
+        "layer": "both"
+      },
+      {
+        "id": "bad_ua",
+        "name": "恶意 User-Agent",
+        "enabled": true,
+        "source": "bad_ua",
+        "window": 600,
+        "threshold": 5,
+        "hours": 12,
+        "layer": "both"
+      },
+      {
+        "id": "bad_proto",
+        "name": "异常协议版本",
+        "enabled": false,
+        "source": "bad_proto",
+        "window": 300,
+        "threshold": 5,
+        "hours": 12,
+        "layer": "both"
+      }
+    ]
+  },
+  "cloudflare": {
+    "enabled": false,
+    "api_token": "",
+    "account_id": "",
+    "zone_id": "",
+    "zone_name": "",
+    "auto_sync": true,
+    "note": "HomeWatch",
+    "timeout": 8
+  }
+}

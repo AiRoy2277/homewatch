@@ -1,0 +1,12 @@
+[Unit]
+Description=HomeWatch collector & dashboard render
+Documentation=https://github.com/yourname/homewatch
+After=network.target nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/homewatch/hw.py run
+# 采集是 IO 密集型，降一点优先级免得和后端服务抢 CPU
+Nice=10
+# 单次运行超过 2 分钟肯定卡住了，杀掉等下一轮
+TimeoutStartSec=120

@@ -1,0 +1,4331 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__ · 家庭公网态势</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --fg:#1b1f24; --dim:#6b7280;
+  --red:#d93025; --amber:#b26a00; --green:#1a7f4b; --blue:#2563eb;
+  --redbg:#fdecea; --amberbg:#fdf3e0; --greenbg:#e9f6ef;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1216; --card:#161b22; --line:#252c35; --fg:#e6edf3; --dim:#9aa4b2;
+    --red:#ff6b60; --amber:#e3a008; --green:#4ade80; --blue:#60a5fa;
+    --redbg:#2a1614; --amberbg:#2a2213; --greenbg:#12241a; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+ font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+ -webkit-font-smoothing:antialiased}
+::selection{background:color-mix(in srgb,var(--blue) 22%,transparent)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:7px;border:3px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+/* ---- 整体骨架：左侧固定导航 + 右侧内容 ---- */
+.app{display:flex;min-height:100vh}
+.side{position:fixed;inset:0 auto 0 0;width:216px;z-index:40;
+ display:flex;flex-direction:column;gap:18px;padding:18px 14px;
+ background:var(--card);border-right:1px solid var(--line);overflow-y:auto}
+.main{flex:1;min-width:0;margin-left:216px;display:flex;flex-direction:column}
+.content{max-width:1080px;margin:0 auto;padding:22px 24px 64px}
+
+.brand{display:flex;align-items:center;gap:10px;padding:2px 6px 0}
+.brand .logo{width:32px;height:32px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;
+ background:linear-gradient(145deg,var(--blue),color-mix(in srgb,var(--blue) 55%,#7c3aed));
+ color:#fff;box-shadow:0 2px 8px color-mix(in srgb,var(--blue) 30%,transparent)}
+.brand .logo svg{width:17px;height:17px}
+.brand b{display:block;font-size:14px;letter-spacing:.2px;line-height:1.25}
+.brand span{display:block;font-size:11px;color:var(--dim);margin-top:1px}
+
+.menu{display:flex;flex-direction:column;gap:4px}
+.mi{position:relative;display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:center;
+ padding:9px 10px;border:0;border-radius:10px;background:none;color:var(--dim);
+ font-family:inherit;text-align:left;cursor:pointer;
+ transition:background .15s,color .15s}
+.mi svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round}
+.mi .mi-t{display:block;font-size:13px;font-weight:600;color:var(--fg);transition:color .15s}
+.mi .mi-d{display:block;font-size:11px;color:var(--dim);margin-top:1px}
+.mi:hover{background:var(--bg)}
+.mi.on{background:color-mix(in srgb,var(--blue) 11%,transparent);color:var(--blue)}
+.mi.on .mi-t{color:var(--blue)}
+.mi.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;
+ border-radius:0 3px 3px 0;background:var(--blue)}
+.mi:focus-visible{outline:2px solid color-mix(in srgb,var(--blue) 55%,transparent);outline-offset:1px}
+
+.side-stats{margin-top:auto;margin-bottom:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.side-stats .ss{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+ padding:7px 10px;border-top:1px solid var(--line)}
+.side-stats .ss:first-child{border-top:0}
+.side-stats b{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.side-stats span{font-size:11px;color:var(--dim)}
+
+.side-foot{margin-top:0;border-top:1px solid var(--line);padding:12px 6px 2px;font-size:11px;color:var(--dim)}
+.live{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--fg);margin-bottom:5px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto;
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 20%,transparent);
+ transition:background .2s,box-shadow .2s}
+.live i.warn{background:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 22%,transparent)}
+.live i.bad{background:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 22%,transparent)}
+.side-foot .meta{display:flex;justify-content:space-between;gap:8px;line-height:1.7}
+
+/* ---- 顶栏 + 顶部 tab 切换栏（整块吸顶） ---- */
+.head{position:sticky;top:0;z-index:30;
+ background:color-mix(in srgb,var(--bg) 90%,transparent);
+ backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;
+ justify-content:space-between;gap:16px;padding:13px 24px 6px}
+.tabbar{display:flex;gap:2px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tab{position:relative;display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+ padding:8px 12px 11px;border:0;background:none;color:var(--dim);cursor:pointer;
+ font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.2px;
+ border-radius:9px 9px 0 0;transition:color .15s,background .15s}
+.tab svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round}
+.tab:hover{color:var(--fg);background:color-mix(in srgb,var(--fg) 5%,transparent)}
+.tab.on{color:var(--blue)}
+.tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:2px;
+ border-radius:2px 2px 0 0;background:var(--blue)}
+.tab:focus-visible{outline:2px solid color-mix(in srgb,var(--blue) 55%,transparent);outline-offset:-2px}
+.tb-title h1{font-size:16px;margin:0;letter-spacing:.2px}
+.tb-title p{margin:1px 0 0;font-size:12px;color:var(--dim)}
+.tb-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:999px;
+ border:1px solid var(--line);background:var(--card);color:var(--dim);font-size:12px;
+ transition:color .2s,border-color .2s}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.chip.ok{color:var(--green);border-color:color-mix(in srgb,var(--green) 32%,transparent)}
+.chip.warn{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 32%,transparent)}
+.chip.bad{color:var(--red);border-color:color-mix(in srgb,var(--red) 32%,transparent)}
+.stamp{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.iconbtn{width:30px;height:30px;display:grid;place-items:center;flex:0 0 auto;
+ padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card);
+ color:var(--dim);cursor:pointer;transition:color .15s,border-color .15s,transform .3s}
+.iconbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;
+ stroke-linecap:round;stroke-linejoin:round}
+.iconbtn:hover{color:var(--fg);border-color:var(--dim)}
+.iconbtn:active{transform:rotate(-40deg)}
+.iconbtn.busy{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tb-brand{display:none;align-items:center;gap:8px}
+.tb-brand .logo{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+ background:linear-gradient(145deg,var(--blue),color-mix(in srgb,var(--blue) 55%,#7c3aed));color:#fff}
+.tb-brand .logo svg{width:14px;height:14px}
+
+/* ---- 移动端底部导航 ---- */
+.bottomnav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;
+ padding:5px 6px calc(5px + env(safe-area-inset-bottom));
+ background:color-mix(in srgb,var(--card) 92%,transparent);
+ backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+ padding:6px 0;border:0;background:none;color:var(--dim);font-family:inherit;
+ font-size:11px;cursor:pointer;border-radius:9px;transition:color .15s,background .15s}
+.bottomnav button svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round}
+.bottomnav button.on{color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,transparent)}
+
+h1{font-size:17px;margin:0;letter-spacing:.2px}
+
+@media(max-width:1000px){
+  .side{display:none}
+  .main{margin-left:0}
+  .topbar{padding:10px 14px 2px}
+  .topbar .stamp{display:none}
+  .tabbar{padding:0 6px}
+  .tb-brand{display:flex}
+  .tb-title h1{font-size:15px}
+  .tb-title p{display:none}
+  .content{padding:16px 14px 64px}
+  .card{overflow-x:auto}
+  table{font-size:12px}
+  .geo{max-width:132px}
+  td.p{max-width:150px}
+  .mono{font-size:11px}
+  td.n{width:52px}
+}
+/* 手机：底部保留模块导航，顶部保留视图 tab，两者层级不同不算重复 */
+@media(max-width:700px){
+  .bottomnav{display:flex}
+  .content{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  .tab{padding:7px 10px 9px;font-size:12.5px}
+  .tab svg{width:15px;height:15px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+.banner{border-radius:10px;padding:14px 16px;font-weight:600;margin-bottom:16px;
+ display:flex;align-items:center;gap:10px;border:1px solid transparent}
+.banner.red{background:var(--redbg);color:var(--red);border-color:color-mix(in srgb,var(--red) 30%,transparent)}
+.banner.yellow{background:var(--amberbg);color:var(--amber);border-color:color-mix(in srgb,var(--amber) 30%,transparent)}
+.banner.green{background:var(--greenbg);color:var(--green);border-color:color-mix(in srgb,var(--green) 30%,transparent)}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:0 0 auto;
+ box-shadow:0 0 0 4px color-mix(in srgb,currentColor 18%,transparent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.kpi .l{color:var(--dim);font-size:12px;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--dim);letter-spacing:.3px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--dim);font-weight:500;font-size:12px;padding:0 0 6px;white-space:nowrap}
+td{padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+td.n{text-align:right;width:64px;white-space:nowrap}
+th:not(:first-child),td:not(:first-child){padding-left:12px}
+th:not(:first-child),td:not(:first-child){padding-left:12px}
+td.p{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+ max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:5px;margin-left:6px;
+ background:var(--bg);color:var(--dim);border:1px solid var(--line)}
+.tag.own{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 40%,transparent)}
+.chart{width:100%;height:150px;display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--dim);margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+.empty{color:var(--dim);font-size:13px;padding:6px 0}
+footer{color:var(--dim);font-size:12px;text-align:center;margin-top:8px}
+
+/* ---- 管理页 ---- */
+.hide{display:none !important}
+.btn{padding:5px 12px;border-radius:7px;border:1px solid var(--line);background:var(--card);
+ color:var(--fg);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;
+ transition:background .15s,border-color .15s,transform .06s,filter .15s}
+.btn:hover:not(:disabled){border-color:var(--dim)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=password],select{padding:6px 9px;border-radius:7px;
+ border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:13px;font-family:inherit}
+input[type=text]{min-width:180px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sep{height:1px;background:var(--line);margin:16px 0}
+h4{font-size:13px;font-weight:600;margin:0}
+.pill{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.pill.ok{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent)}
+.pill.off{color:var(--red);border-color:color-mix(in srgb,var(--red) 40%,transparent)}
+.hint{color:var(--dim);font-size:12px;margin-top:8px;line-height:1.6}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;padding:10px 18px;
+ border-radius:9px;font-size:13px;background:var(--fg);color:var(--bg);opacity:0;
+ transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.toast.err{background:var(--red);color:#fff}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.geo{font-size:12px;color:var(--dim);max-width:230px;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.cc{display:inline-block;font:600 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+ letter-spacing:.4px;color:var(--dim);border:1px solid var(--line);border-radius:4px;
+ padding:0 3px;margin-right:6px;vertical-align:1px;background:var(--bg)}
+.geo .cc{font-size:10px;margin-right:5px}
+input[type=number]{padding:5px 6px;border-radius:6px;border:1px solid var(--line);
+ background:var(--card);color:var(--fg);font-size:12px;font-family:inherit;width:72px}
+select.mini{padding:4px 6px;font-size:12px;border-radius:6px}
+table.rules td{padding:8px 0;vertical-align:middle}
+/* 规则表：固定列宽 + 表头左对齐，否则表头被内联右对齐推到列尾，和输入框错开 */
+table.rules{table-layout:fixed}
+table.rules th{text-align:left!important}
+table.rules td{text-align:left!important}
+table.rules th:nth-child(1){width:31%}
+table.rules th:nth-child(2),table.rules th:nth-child(3),table.rules th:nth-child(4){width:14%}
+table.rules th:nth-child(5){width:17%}
+table.rules th:nth-child(6){width:104px;text-align:right!important}
+table.rules td:nth-child(6){text-align:right!important;white-space:nowrap}
+table.rules td:first-child input{width:126px;min-width:0}
+.sw{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.sw:first-child{border-top:0}
+.sw .txt{flex:1;min-width:140px}
+.sw .txt b{font-weight:600;font-size:13px}
+.sw .txt div{color:var(--dim);font-size:12px;margin-top:1px}
+.wlchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);
+ border-radius:999px;padding:3px 6px 3px 10px;margin:0 6px 6px 0;font-size:12px;
+ font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.wlchip button{border:0;background:none;color:var(--dim);cursor:pointer;font-size:14px;
+ line-height:1;padding:0 2px}
+.wlchip button:hover{color:var(--red)}
+.bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:3px}
+
+/* 管理页表格：端口列和操作列收紧，别把中间拉得稀 */
+#adm-ports{table-layout:fixed}
+#adm-ports th:nth-child(1),#adm-ports td:nth-child(1){width:64px}
+#adm-ports th:nth-child(2){text-align:left!important}
+#adm-ports th:nth-child(3){width:164px}
+#adm-ports th:nth-child(4){width:140px}
+@media(max-width:1180px){
+  #adm-ports{table-layout:auto}
+  #adm-ports th:nth-child(3),#adm-ports td:nth-child(3),
+  #adm-ports th:nth-child(4),#adm-ports td:nth-child(4){width:auto}
+}
+#adm-blocked{table-layout:fixed}
+#adm-blocked th:nth-child(2){text-align:left!important}
+#adm-blocked td:nth-child(2){text-align:left}
+#adm-blocked td:nth-child(3){text-align:right}
+#adm-blocked th:nth-child(2){width:150px}
+#adm-blocked th:nth-child(3){width:120px}
+#adm-auth table{width:auto;min-width:340px}
+#adm-auth td:first-child{width:88px;white-space:nowrap;color:var(--dim)}
+#adm-blocked th:last-child,#adm-blocked td:last-child{width:72px;text-align:right}
+
+/* ---- 交互细节 ---- */
+.card{transition:border-color .16s,box-shadow .16s}
+.card:hover{border-color:color-mix(in srgb,var(--fg) 13%,var(--line))}
+.kpi{transition:transform .16s,border-color .16s,box-shadow .16s}
+.kpi:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--fg) 15%,var(--line));
+ box-shadow:0 5px 16px color-mix(in srgb,var(--fg) 6%,transparent)}
+td{transition:background .12s}
+tr:hover>td{background:color-mix(in srgb,var(--fg) 3%,transparent)}
+input[type=text],input[type=password],input[type=number],select{
+ border-color:color-mix(in srgb,var(--fg) 15%,var(--line))}
+input:focus,select:focus{outline:0;border-color:var(--blue);
+ box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 16%,transparent)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* 模块内视图：只有当前视图显示，切过去轻微淡入 */
+.pane{display:none}
+.pane.on{display:block;animation:fadeUp .2s ease}
+
+/* ================= v0.5 布局重排 =================
+   目标：宽屏铺满、同一屏放下更多信息、不留整块空白。
+   网格一律 minmax(0,1fr)，否则表格会把列撑破。 */
+.content{max-width:1360px;margin:0 auto;padding:18px 22px 40px;width:100%;
+ flex:1;display:flex;flex-direction:column}
+#foot{margin-top:auto;padding-top:18px}
+.cols{display:grid;gap:14px;margin-bottom:14px;align-items:start}
+.cols>.stack{min-width:0}
+.c-75{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.c-64{grid-template-columns:minmax(0,1.28fr) minmax(0,1fr)}
+.c-55{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.c-37{grid-template-columns:minmax(0,1fr) minmax(0,1.55fr)}
+/* 三栏并排时拉齐高度：右边监听列表带滚动，不拉齐会参差 */
+.c-3{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+@media(max-width:1180px){
+  .c-75,.c-64,.c-55,.c-37,.c-3{grid-template-columns:minmax(0,1fr)}
+}
+.cols>.card,.cols>.stack{margin-bottom:0}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.stack>.card{margin-bottom:0}
+
+/* 卡片更紧，信息密度上来 */
+.card{padding:13px 15px;margin-bottom:14px;border-radius:12px}
+.card h3{margin:0 0 10px;font-size:11.5px;letter-spacing:.6px}
+.card.tight{padding:11px 13px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.card-h h3{margin:0}
+
+/* 指标条：一行铺满，不再掉行 */
+.kpis{grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.kpi{padding:9px 11px;border-radius:10px}
+.kpi .v{font-size:20px;letter-spacing:-.4px;line-height:1.2}
+.kpi .l{font-size:11px;margin-top:1px}
+@media(max-width:1180px){.kpis{grid-template-columns:repeat(auto-fit,minmax(104px,1fr))}}
+
+/* 横幅压扁，它只是结论，不需要 60px 高 */
+.banner{padding:9px 13px;font-size:13px;margin-bottom:12px;border-radius:10px}
+
+/* 时间范围选择条 */
+.rangebar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.rangebar .grp{display:flex;gap:4px;padding:3px;border:1px solid var(--line);
+ border-radius:9px;background:var(--card)}
+.rangebar .sep2{width:1px;height:18px;background:var(--line);margin:0 3px}
+.rg{padding:4px 9px;border:0;border-radius:6px;background:none;color:var(--dim);
+ font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
+ transition:background .14s,color .14s}
+.rg:hover{color:var(--fg);background:color-mix(in srgb,var(--fg) 6%,transparent)}
+.rg.on{background:var(--blue);color:#fff}
+.rg:focus-visible{outline:2px solid color-mix(in srgb,var(--blue) 55%,transparent);outline-offset:1px}
+.rangebar .tip{font-size:11.5px;color:var(--dim);margin-left:auto;white-space:nowrap}
+
+/* 图表 */
+.chartcard{padding-bottom:8px}
+.chart{width:100%;height:clamp(210px,32vh,360px);display:block;overflow:visible}
+.ch-axis{font-size:10.5px;fill:var(--dim)}
+.ch-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.ch-head h3{margin:0}
+.ch-note{font-size:11.5px;color:var(--dim)}
+.ch-x{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);
+ margin-top:5px;padding:0 2px;font-variant-numeric:tabular-nums}
+
+/* 紧凑键值行，替代一大批小卡片 */
+.kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+ padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.kv:first-child{border-top:0;padding-top:0}
+.kv span{color:var(--dim);font-size:12px}
+.kv b{font-variant-numeric:tabular-nums;font-weight:600}
+.kv b.red{color:var(--red)}
+.kv b.blue{color:var(--blue)}
+.kv b.amber{color:var(--amber)}
+
+/* 被探路径：做成标签流，比两列表格更能吃满宽度 */
+.pathwrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.pathchip{display:inline-flex;align-items:center;gap:8px;padding:5px 9px;
+ border:1px solid var(--line);border-radius:8px;background:var(--bg);
+ font-size:12px;max-width:100%}
+.pathchip span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pathchip b{color:var(--dim);font-weight:600;font-variant-numeric:tabular-nums;flex:0 0 auto}
+
+/* 表格再压一档 */
+td{padding:5px 0}
+th{padding:0 0 5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ================= v0.6 组件层 =================
+   目标：把"状态、开关、类型"做成一眼能认的控件，
+   而不是一堆按钮和下拉框挤在表格里。 */
+
+/* 模块顶部概览条：4 个数字把这一页的结论先说清 */
+.strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}
+.tile{position:relative;background:var(--card);border:1px solid var(--line);
+ border-radius:11px;padding:10px 12px;min-width:0;overflow:hidden}
+.tile .t-l{font-size:11.5px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.tile .t-v{font-size:19px;font-weight:650;letter-spacing:-.3px;margin-top:2px;
+ font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:6px}
+.tile .t-s{font-size:11px;color:var(--dim);margin-top:1px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.ok{border-color:color-mix(in srgb,var(--green) 28%,var(--line))}
+.tile.warn{border-color:color-mix(in srgb,var(--amber) 30%,var(--line))}
+.tile.bad{border-color:color-mix(in srgb,var(--red) 30%,var(--line))}
+.tile .t-v small{font-size:11px;font-weight:600;color:var(--dim)}
+@media(max-width:1240px){.strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 分段控件：用于"入站类型""封禁时长"这类有限选项 */
+.seg{display:inline-flex;padding:2px;gap:2px;border:1px solid var(--line);
+ border-radius:8px;background:var(--bg)}
+.seg button{padding:3px 8px;border:0;border-radius:6px;background:none;color:var(--dim);
+ font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+ transition:background .14s,color .14s}
+.seg button:hover{color:var(--fg)}
+.seg button.on{background:var(--card);color:var(--blue);
+ box-shadow:0 1px 2px color-mix(in srgb,var(--fg) 12%,transparent)}
+.seg button.on.warn{color:var(--amber)}
+.seg button.on.bad{color:var(--red)}
+.seg.sm button{padding:2px 6px;font-size:11px}
+
+/* 开关 */
+.tgl{position:relative;width:36px;height:21px;border-radius:999px;border:1px solid var(--line);
+ background:var(--bg);cursor:pointer;flex:0 0 auto;transition:background .18s,border-color .18s;padding:0}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+ background:var(--card);box-shadow:0 1px 3px color-mix(in srgb,var(--fg) 25%,transparent);
+ transition:left .18s}
+.tgl.on{background:var(--blue);border-color:var(--blue)}
+.tgl.on::after{left:18px;background:#fff}
+.tgl:disabled{opacity:.45;cursor:not-allowed}
+
+/* 可点 IP：整站所有 IP 都长这样，点开是档案 */
+.ip{cursor:pointer;border-radius:4px;transition:color .13s,background .13s;
+ border-bottom:1px dashed color-mix(in srgb,var(--dim) 45%,transparent)}
+.ip:hover{color:var(--blue);background:color-mix(in srgb,var(--blue) 9%,transparent);
+ border-bottom-color:var(--blue)}
+.ip.banned{color:var(--red);border-bottom-color:color-mix(in srgb,var(--red) 45%,transparent)}
+.ip.mine{color:var(--blue);border-bottom-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+
+/* 一行一行的服务/规则，比表格更省空间 */
+.srow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;
+ padding:10px 0;border-top:1px solid var(--line)}
+.srow:first-child{border-top:0;padding-top:0}
+.srow .s-t{min-width:0}
+.srow .s-t b{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+.srow .s-t span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 端口表 */
+table.ports{table-layout:fixed}
+table.ports th{text-align:left!important}
+table.ports th:nth-child(1){width:66px}
+table.ports th:nth-child(2){width:auto}
+table.ports th:nth-child(3){width:212px}
+table.ports th:nth-child(4){width:176px}
+table.ports td{vertical-align:middle}
+table.ports td.c{text-align:left!important}
+@media(max-width:1180px){
+  table.ports{table-layout:auto}
+  table.ports th:nth-child(3),table.ports td:nth-child(3),
+  table.ports th:nth-child(4),table.ports td:nth-child(4){width:auto}
+}
+table.ports .seg{gap:1px}
+table.ports .seg button{padding:2px 6px;font-size:11px}
+
+/* 弹窗：桌面右侧抽屉，手机底部上推 */
+.modal{position:fixed;inset:0;z-index:90;display:flex;justify-content:flex-end}
+.modal[hidden]{display:none}
+.modal .mask{position:absolute;inset:0;background:#0a0d11;opacity:.42;
+ animation:fadeIn .18s ease}
+.sheet{position:relative;width:min(600px,100%);height:100%;display:flex;flex-direction:column;
+ background:var(--card);border-left:1px solid var(--line);box-shadow:-18px 0 50px rgba(0,0,0,.16);
+ animation:slideIn .22s cubic-bezier(.2,.7,.3,1)}
+.sheet-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+ padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+.sheet-h h2{margin:0;font-size:17px;letter-spacing:-.2px;
+ font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.sheet-sub{font-size:12px;color:var(--dim);margin-top:3px;display:flex;align-items:center;
+ gap:8px;flex-wrap:wrap}
+.sheet-b{padding:14px 18px 18px;overflow-y:auto;flex:1}
+.sheet-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+ padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
+ background:var(--card)}
+.sheet-f .grow{flex:1}
+@keyframes slideIn{from{transform:translateX(26px)}to{transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:.42}}
+@keyframes sheetUp{from{transform:translateY(30px)}to{transform:none}}
+@media(max-width:700px){
+  .modal{align-items:flex-end}
+  .sheet{width:100%;height:auto;max-height:92vh;border-left:0;
+   border-top:1px solid var(--line);border-radius:16px 16px 0 0;
+   animation:sheetUp .24s cubic-bezier(.2,.7,.3,1)}
+  .sheet-b{padding-bottom:8px}
+}
+.modal-open{overflow:hidden}
+
+/* 弹窗内部 */
+.m-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.m-stat{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+.m-stat b{display:block;font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.m-stat span{font-size:10.5px;color:var(--dim)}
+.m-sec{margin-top:14px}
+.m-sec>h4{font-size:11.5px;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;
+ margin:0 0 7px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+.m-sec>h4 em{font-style:normal;font-size:11px;letter-spacing:0;text-transform:none;color:var(--dim)}
+.m-chart{width:100%;height:64px;display:block;margin:2px 0 4px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 7px;
+ border-radius:999px;border:1px solid var(--line);color:var(--dim);background:var(--bg)}
+.badge.red{color:var(--red);border-color:color-mix(in srgb,var(--red) 40%,transparent);
+ background:var(--redbg)}
+.badge.green{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent);
+ background:var(--greenbg)}
+.badge.blue{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 40%,transparent)}
+.badge.amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent);
+ background:var(--amberbg)}
+.ua{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--dim);
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.kv2{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv2 span{color:var(--dim)}
+.kv2 b{font-weight:600;font-variant-numeric:tabular-nums;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+
+/* 端口方向徽标 */
+.dir{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--dim)}
+.dir i{width:6px;height:6px;border-radius:50%;background:var(--green);flex:0 0 auto}
+.dir.lan i{background:var(--blue)}
+.dir.cf i{background:#f38020}
+.dir.deny i{background:var(--red)}
+
+/* 桌面端：地区有独立一列，行内副本和行内标签都藏起来 */
+.geo-in{display:none}
+.lbl{display:none}
+
+/* 来源表：固定列宽收住长 UA 和长地区。
+   td 上的 max-width 在表格布局里不生效，长文本会把整张表撑出卡片，
+   只能靠 fixed 布局 + 省略号。 */
+#ips{table-layout:fixed}
+#ips th:nth-child(2){width:24%}
+#ips th:nth-child(3),#ips th:nth-child(4){width:54px}
+#ips th:nth-child(5){width:78px}
+#ips td:first-child{overflow:hidden}
+#rangeTop{table-layout:fixed}
+#rangeTop th:nth-child(2),#rangeTop th:nth-child(3){width:62px}
+
+/* 封禁流水六列，窄卡片里"24 小时"会被挤成三行，固定列宽 + 省略号 */
+#pol-bans table{table-layout:fixed}
+#pol-bans th:nth-child(1),#pol-bans td:nth-child(1){width:78px;white-space:nowrap}
+#pol-bans th:nth-child(2),#pol-bans td:nth-child(2){width:118px}
+#pol-bans th:nth-child(3),#pol-bans td:nth-child(3){width:104px}
+#pol-bans th:nth-child(4),#pol-bans td:nth-child(4){width:54px;white-space:nowrap}
+#pol-bans th:nth-child(5),#pol-bans td:nth-child(5){width:50px}
+#pol-bans td:nth-child(3),#pol-bans td:nth-child(6){overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+
+/* ================= 窄屏（≤640px）微调 =================
+   手机上的原则：宁可少一列，也不要让人左右滑着看数字。
+   - 来源表：地区从单独一列折成 IP 后面的一小段，去掉"最后出现"
+   - 规则表：整表变卡片，输入框各占一行带标签，不再互相挤 */
+@media(max-width:640px){
+  .content{padding:14px 10px 64px}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .card{padding:12px;margin-bottom:12px;overflow-x:hidden}
+
+  /* 表头是纯 th，没有类名，只能按列号隐藏，否则表头与单元格对不上 */
+  #ips th:nth-child(2),#ips td:nth-child(2){display:none}
+  #ips th:nth-child(5),#ips td:nth-child(5){display:none}
+  #ips td.n,#ips th.n{width:auto}
+  /* 被拦是手机上最后一列，右对齐后贴着卡片边，留 4px 免得笔画被吃掉 */
+  #ips th:nth-child(4),#ips td:nth-child(4){padding-right:4px}
+  .geo-in{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;
+   color:var(--dim);margin-left:2px}
+
+  table.rules{table-layout:auto;display:block}
+  table.rules tr{display:block;border:1px solid var(--line);border-radius:10px;
+   padding:10px 11px;margin-bottom:9px;background:var(--bg)}
+  table.rules tr:first-child{display:none}
+  table.rules td{display:flex;align-items:center;gap:9px;border:0;padding:3px 0;
+   text-align:left!important;white-space:normal!important}
+  table.rules td .lbl{display:inline-block;flex:0 0 46px;color:var(--dim);font-size:11.5px}
+  table.rules td input,table.rules td select{flex:1 1 auto;min-width:0;width:auto!important}
+  table.rules td:first-child{display:block;margin-bottom:5px;padding:0}
+  table.rules td:first-child input{width:100%!important;font-weight:600}
+  table.rules td:last-child{justify-content:flex-end;padding-top:8px;margin-top:5px;
+   border-top:1px dashed var(--line)}
+
+  /* 封禁流水：时间不变，地区列折掉，避免六列挤成一团 */
+  #pol-bans th:nth-child(3),#pol-bans td:nth-child(3){display:none}
+}
+/* ================= v0.7 防火墙规则 / 异常来源 ================= */
+
+/* 异常表：整行可点，行内直接露出 top 来源 IP */
+#anomaly tr.link{cursor:pointer}
+#anomaly tr.link:hover>td{background:color-mix(in srgb,var(--blue) 7%,transparent)}
+.an-ips{display:flex;flex-wrap:wrap;gap:3px 9px;margin-top:3px;font-size:11.5px}
+.an-ips .ip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.an-more{border:0;background:none;color:var(--blue);font-size:11.5px;cursor:pointer;
+ padding:0;font-family:inherit}
+.an-more:hover{text-decoration:underline}
+
+/* 防火墙规则表 */
+table.fw{table-layout:fixed}
+table.fw th{text-align:left!important}
+table.fw th:nth-child(1){width:34px}
+table.fw th:nth-child(2){width:242px}
+table.fw th:nth-child(3){width:auto}
+table.fw th:nth-child(4){width:60px}
+table.fw th:nth-child(5){width:84px}
+table.fw th:nth-child(6){width:50px}
+table.fw th:nth-child(7){width:120px;text-align:right!important}
+table.fw td:nth-child(7) .btn{padding:4px 9px}
+table.fw td{vertical-align:middle}
+.fw-cond{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12px}
+.fw-sub{font-size:11.5px;color:var(--dim);margin-top:3px;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.fw-ord{display:flex;flex-direction:column;gap:2px}
+.fw-ord button{border:1px solid var(--line);background:var(--card);color:var(--dim);
+ border-radius:5px;width:20px;height:15px;line-height:1;font-size:9px;cursor:pointer;padding:0}
+.fw-ord button:hover:not(:disabled){color:var(--fg);border-color:var(--dim)}
+.fw-ord button:disabled{opacity:.28;cursor:default}
+.act{font-size:11.5px;font-weight:600}
+.act.allow{color:var(--green)}
+.act.drop{color:var(--red)}
+.num{font-variant-numeric:tabular-nums}
+
+/* 规则编辑器 */
+.fld{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 12px;
+ align-items:center;margin-bottom:11px}
+.fld>label{font-size:12px;color:var(--dim)}
+.fld .ctl{min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.fld input[type=text]{width:100%;min-width:0}
+.fld .mini{width:88px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip2{border:1px solid var(--line);background:var(--card);color:var(--dim);border-radius:999px;
+ padding:3px 9px;font-size:11.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.chip2:hover{color:var(--fg);border-color:var(--dim)}
+.chip2.on{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 45%,transparent);
+ background:color-mix(in srgb,var(--blue) 8%,transparent)}
+.fw-preview{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+ background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;
+ white-space:pre-wrap;color:var(--dim);max-height:230px;overflow:auto;line-height:1.55}
+.fw-note{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--dim);
+ line-height:1.6;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+ padding:8px 10px;margin-bottom:12px}
+
+/* 监听与容器：列表自己滚，提示语钉在卡片底部（8 个端口也不会把卡片撑得比邻居高） */
+#fwListen{display:flex;flex-direction:column;min-height:0;padding-right:2px}
+#fwListen .listen-scroll{overflow:auto;max-height:288px;padding-right:6px;
+ scrollbar-width:thin;flex:1 1 auto;min-height:0}
+#fwListen .hint{margin:8px 0 0;flex:0 0 auto}
+.listen-row{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:10px;
+ align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.listen-row:first-child{border-top:0;padding-top:0}
+.listen-row .l-p{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;font-size:12px}
+.listen-row .l-w{font-size:11.5px;color:var(--dim);overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+
+/* 概览条：守护开关放右上角，一眼能看到 */
+.tile .t-sw{position:absolute;top:8px;right:9px}
+.tile .t-v{padding-right:38px}
+
+@media(max-width:1180px){table.fw{table-layout:auto}}
+@media(max-width:640px){
+  table.fw,table.fw tbody,table.fw tr,table.fw td{display:block}
+  table.fw tr:first-child{display:none}
+  table.fw tr{position:relative;border:1px solid var(--line);border-radius:10px;
+   padding:10px 11px;margin-bottom:8px;background:var(--bg);animation:none}
+  table.fw td{border:0;padding:2px 0;display:flex;justify-content:space-between;
+   align-items:center;gap:10px;text-align:left!important}
+  table.fw td:nth-child(1){position:absolute;right:8px;top:8px;padding:0;width:auto}
+  table.fw .fw-ord{flex-direction:row;gap:3px}
+  table.fw td:nth-child(2){font-weight:600;display:block;padding-right:48px}
+  table.fw td:nth-child(3){display:block;padding-top:5px}
+  table.fw td:nth-child(4)::before{content:"动作";color:var(--dim);font-weight:400;
+   font-size:11.5px}
+  table.fw td:nth-child(5)::before{content:"命中";color:var(--dim);font-weight:400;
+   font-size:11.5px}
+  table.fw td:nth-child(6)::before{content:"启用";color:var(--dim);font-weight:400;
+   font-size:11.5px}
+  table.fw td:nth-child(7){justify-content:flex-end;border-top:1px dashed var(--line);
+   margin-top:6px;padding-top:7px}
+  /* 空状态那一行也走卡片样式，去掉省略号让它整句换行 */
+  table.fw td.empty{display:block;white-space:normal!important;line-height:1.6;
+   text-align:left!important;font-size:12.5px}
+  .fld{grid-template-columns:minmax(0,1fr);gap:4px}
+  .fld>label{margin-top:3px}
+  .sheet-b{padding-left:14px;padding-right:14px}
+}
+
+/* ================= v0.8 地域封锁 / 已封禁标记 ================= */
+
+/* IP 旁边的「已封禁」标：列表、抽屉、概览口径一致 */
+.ipw{display:inline-flex;align-items:center;gap:5px;max-width:100%;min-width:0}
+.ban-tag{font-size:9.5px;line-height:1;padding:2px 4px;border-radius:4px;white-space:nowrap;
+ background:var(--redbg);color:var(--red);
+ border:1px solid color-mix(in srgb,var(--red) 35%,transparent)}
+
+/* 地域封锁：一行一个方向，右边一个大开关 */
+.swrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;
+ align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+.swrow:first-child{border-top:0;padding-top:2px}
+.swrow .sw-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+ font-size:13.5px;font-weight:600}
+.swrow .sw-d{font-size:11.5px;color:var(--dim);line-height:1.55;margin-top:2px}
+.swrow .sw-x{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.swrow .tgl{width:44px;height:25px;flex:0 0 auto}
+.geo-warn{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.6;
+ color:var(--amber);background:var(--amberbg);border-radius:8px;padding:8px 10px;
+ border:1px solid color-mix(in srgb,var(--amber) 30%,transparent)}
+.geo-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;font-size:12.5px}
+.geo-kv span{color:var(--dim)}
+.geo-kv b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ex-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);
+ border-radius:999px;padding:2px 8px;font-size:11.5px;color:var(--dim);
+ font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.ex-chip button{border:0;background:none;color:var(--dim);cursor:pointer;
+ padding:0;font-size:13px;line-height:1}
+.ex-chip button:hover{color:var(--red)}
+
+@media(max-width:640px){
+  .swrow{gap:6px 10px}
+  .swrow .sw-x{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l7 3v5.5c0 4.2-2.9 7.4-7 9.5-4.1-2.1-7-5.3-7-9.5V6z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <b>__TITLE__</b>
+        <span>家庭公网入口</span>
+      </div>
+    </div>
+
+    <nav class="menu" aria-label="主导航">
+      <button class="mi on" data-tab="mon" aria-current="page">
+        <svg viewBox="0 0 24 24"><path d="M2 12h4l2.5 7 3.5-14 3 7h7"/></svg>
+        <span><span class="mi-t">态势</span><span class="mi-d">实时概览</span></span>
+      </button>
+      <button class="mi" data-tab="adm">
+        <svg viewBox="0 0 24 24"><path d="M4 7h8M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/>
+          <circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        <span><span class="mi-t">管理</span><span class="mi-d">端口 · SSH · 封禁</span></span>
+      </button>
+      <button class="mi" data-tab="pol">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.2-2.9 7.4-7 9.5-4.1-2.1-7-5.3-7-9.5V6z"/>
+          <path d="M12 8v4M12 15.5v.5"/></svg>
+        <span><span class="mi-t">策略</span><span class="mi-d">自动封禁规则</span></span>
+      </button>
+    </nav>
+
+    <div class="side-stats">
+      <div class="ss"><span>今日请求</span><b id="ssTotal">—</b></div>
+      <div class="ss"><span>已拦截</span><b id="ssBlocked">—</b></div>
+      <div class="ss"><span>拦截率</span><b id="ssRate">—</b></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="live"><i id="sideDot"></i><span id="sideState">连接中…</span></div>
+      <div class="meta"><span>HomeWatch</span><span>__VERSION__</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <div class="tb-brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3l7 3v5.5c0 4.2-2.9 7.4-7 9.5-4.1-2.1-7-5.3-7-9.5V6z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="tb-title">
+          <h1 id="pageTitle">态势</h1>
+          <p id="pageSub">实时概览 · 每分钟采集</p>
+        </div>
+      </div>
+      <div class="tb-right">
+        <span class="chip" id="liveChip"><i></i><span id="liveText">加载中</span></span>
+        <span class="stamp" id="stamp"></span>
+        <button class="iconbtn" id="refreshBtn" title="立即刷新（R）" aria-label="立即刷新">
+          <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.4 5.7"/><path d="M20 5v6h-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="tabbar" id="tabbar" role="tablist" aria-label="页面内视图切换"></div>
+    </div><!-- /head -->
+
+    <div class="content">
+
+  <!-- ================= 态势 ================= -->
+  <section id="page-mon">
+    <div class="pane" data-pane="mon.ov">
+    <div id="banner" class="banner green"><span class="dot"></span><span id="bannerText">加载中…</span></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="rangebar" data-rb></div>
+    <div class="cols c-75">
+      <div class="card chartcard">
+        <div class="ch-head">
+          <h3>请求量</h3>
+          <span class="ch-note" id="chartNote">加载中…</span>
+        </div>
+        <svg class="chart" id="chart" viewBox="0 0 900 210" preserveAspectRatio="none"></svg>
+        <div class="ch-x" id="chartX"></div>
+        <div class="legend" style="padding-left:6px">
+          <span><i style="background:var(--red)"></i>被拦截</span>
+          <span><i style="background:var(--blue)"></i>正常访问</span>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>本区间</h3>
+          <div id="rangeSum"><div class="empty">读取中…</div></div>
+        </div>
+        <div class="card tight">
+          <h3>Top 来源</h3>
+          <div class="tablewrap"><table id="rangeTop"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols c-55">
+      <div class="card tight">
+        <h3>异常分布</h3>
+        <div id="ov-anomaly"></div>
+      </div>
+      <div class="card tight">
+        <h3>最近封禁</h3>
+        <div id="ov-bans"></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="mon.src">
+    <div class="rangebar" data-rb></div>
+    <div class="cols c-64">
+      <div class="card">
+        <div class="card-h">
+          <h3>来源 IP</h3>
+          <span class="ch-note" id="srcNote">点 IP 看档案</span>
+        </div>
+        <div class="tablewrap"><table id="ips"></table></div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>地区分布</h3>
+          <div id="geo"></div>
+        </div>
+        <div class="card tight">
+          <h3>响应状态</h3>
+          <div id="status"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3>被探路径</h3>
+        <span class="ch-note" id="pathNote">被拦截的路径与命中次数</span>
+      </div>
+      <div id="paths"></div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="mon.risk">
+    <div class="rangebar" data-rb></div>
+    <div class="cols c-55">
+      <div class="card">
+        <h3>异常特征</h3>
+        <div id="anomaly"></div>
+        <div class="hint">每行下面直接列出打点最多的来源 IP，点 IP 看档案，点行看该类异常的全部来源。超长 URL、超大报文、异常方法/协议、可疑 User-Agent、蜜罐路径；判定线在「策略」页可调，命中后由策略引擎按规则自动封禁。</div>
+      </div>
+      <div class="card"><h3>SSH 爆破</h3><div id="ssh"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3>敏感文件命中</h3>
+        <span class="ch-note">已排除 SPA 首页回退，只列真的返回了内容的</span>
+      </div>
+      <div id="leak"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ================= 管理 ================= -->
+  <section id="page-adm" class="hide">
+    <div class="strip" id="admStrip"></div>
+
+    <div class="pane" data-pane="adm.port">
+    <div class="card">
+      <div class="card-h">
+        <h3>端口与出入站</h3>
+        <span class="ch-note">改完立即写入 nftables，重启后仍生效</span>
+      </div>
+      <div class="tablewrap"><table class="ports" id="adm-ports"></table></div>
+    </div>
+    <div class="cols c-3">
+      <div class="card tight">
+        <h3>四种类型</h3>
+        <div id="portLegend"></div>
+      </div>
+      <div class="card tight">
+        <h3>当前分布</h3>
+        <div id="portSum"></div>
+      </div>
+      <div class="card tight">
+        <h3>要小心</h3>
+        <div class="hint" style="margin:0">
+          入站「禁止」是把该端口的包全部丢弃，不是停服务。面板端口 8088 已在后端禁止设为禁止入站。
+          出站按<b>目标端口</b>限制：设成「仅内网」后，本机访问公网的这个端口会被丢掉。
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.fw">
+    <div class="card">
+      <div class="card-h">
+        <h3>防火墙规则</h3>
+        <span class="ch-note" id="fwNote"></span>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn primary" id="fwAdd">＋ 新建规则</button>
+        <button class="btn" id="fwSeed">按端口页生成</button>
+        <button class="btn" id="fwShow">看 nft 规则</button>
+        <span style="flex:1"></span>
+        <input type="text" id="fwSearch" placeholder="搜索名称 / IP / 端口" style="max-width:220px">
+      </div>
+      <div class="tablewrap"><table class="fw" id="fwTable"></table></div>
+      <div class="hint">
+        规则从上往下匹配，命中即生效：<b>放行</b>可以穿透端口页的「禁止」当白名单用，
+        <b>拒绝</b>比端口页更细（可按来源、端口范围、协议）。改完立即重建 nftables，不用重启。
+        命中数来自 nft 计数器，重建规则表会归零。
+      </div>
+    </div>
+
+    <div class="cols c-3">
+      <div class="card tight">
+        <h3>默认策略</h3>
+        <div id="fwPolicy"></div>
+      </div>
+      <div class="card tight">
+        <h3>端口页基线</h3>
+        <div id="fwBase"></div>
+      </div>
+      <div class="card tight">
+        <h3>监听端口与容器</h3>
+        <div id="fwListen"></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.geo">
+    <div class="card">
+      <div class="card-h">
+        <h3>境外访问</h3>
+        <span class="ch-note" id="geoNote"></span>
+      </div>
+      <div id="geoSwitch"><div class="empty">读取中…</div></div>
+    </div>
+
+    <div class="cols c-64">
+      <div class="card">
+        <div class="card-h">
+          <h3>国内网段清单</h3>
+          <span class="ch-note" id="geoCnNote"></span>
+        </div>
+        <div id="geoCn"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="geoRefresh">刷新网段</button>
+          <button class="btn" id="geoShow">看 nft 规则</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>豁免（不受地域封锁影响）</h3>
+          <div id="geoExempt"></div>
+        </div>
+        <div class="card tight">
+          <h3>拦截命中</h3>
+          <div id="geoHits"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.svc">
+    <div class="cols c-64">      <div class="card">
+        <div class="card-h">
+          <h3>进程守护</h3>
+          <span class="ch-note" id="svcNote"></span>
+        </div>
+        <div id="adm-units"><div class="empty">读取中…</div></div>
+        <div id="svcWarn"></div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>崩溃自动拉起</h3>
+          <div id="adm-guard"><div class="empty">读取中…</div></div>
+        </div>
+        <div class="card tight">
+          <h3>采集健康</h3>
+          <div id="adm-health"><div class="empty">读取中…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h3>SSH 通道</h3>
+        <span class="ch-note" id="sshNote"></span>
+      </div>
+      <div class="cols c-55" style="margin-bottom:0">
+        <div id="adm-ssh"></div>
+        <div>
+          <h4 style="margin:0 0 8px">修改 root 密码</h4>
+          <div class="row" style="flex-direction:column;align-items:stretch;gap:8px;max-width:340px">
+            <input type="password" id="pw1" placeholder="新密码（至少 12 位，含三类字符）" autocomplete="new-password">
+            <input type="password" id="pw2" placeholder="再输一次" autocomplete="new-password">
+            <button class="btn primary" id="pwBtn" style="align-self:flex-start">更新 root 密码</button>
+          </div>
+          <div class="hint">改的是服务器 root 账号密码（SSH 登录用）。密码经内网 HTTP 提交，不经公网。改完正在使用的 SSH 会话不会断开；忘记了只能从 PVE Console 恢复。</div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.ban">
+    <div class="cols c-75">
+      <div class="card">
+        <div class="card-h">
+          <h3>封禁名单</h3>
+          <span class="ch-note" id="banNote"></span>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <input type="text" id="blkIp" placeholder="1.2.3.4" style="max-width:170px">
+          <select id="blkHours">
+            <option value="1">1 小时</option>
+            <option value="24" selected>24 小时</option>
+            <option value="168">7 天</option>
+            <option value="720">30 天</option>
+            <option value="0">永久</option>
+          </select>
+          <select id="blkLayer">
+            <option value="both" selected>两层都封</option>
+            <option value="nginx">只封应用层（CF 回源）</option>
+            <option value="nft">只封网络层（直连）</option>
+          </select>
+          <button class="btn danger" id="blkBtn">封禁</button>
+        </div>
+        <div class="tablewrap"><table id="adm-blocked"></table></div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>封禁响应</h3>
+          <div class="row" style="margin-bottom:8px">
+            <select id="banMode" style="flex:1;min-width:0">
+              <option value="silent">444 静默断开</option>
+              <option value="visible">402 可见拦截</option>
+              <option value="silent_nolog">444 + 不写日志</option>
+            </select>
+            <button class="btn" id="banModeBtn">应用</button>
+          </div>
+          <div class="hint" id="banModeHint" style="margin:0">444 不回任何字节直接断开，扫描器只能看到超时；「不写日志」需要站点 access_log 挂条件，点应用时会自动改。</div>
+        </div>
+        <div class="card tight">
+          <h3>为什么要封两层</h3>
+          <div class="hint" style="margin:0">走 Cloudflare 进来的流量，nft 看到的是 CF 的 IP，在网络层封攻击者无效；应用层（nginx）能看到还原后的真实 IP，两层一起封才干净。</div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.cf">
+    <div class="cols c-55">
+    <div class="card">
+      <h3>Cloudflare 边缘</h3>
+      <div id="cfState"><div class="empty">读取中…</div></div>
+      <div class="sep"></div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="password" id="cfToken" placeholder="API Token（需 Zone.Firewall 编辑权限）"
+               autocomplete="new-password" style="flex:1;min-width:200px">
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="cfZone" placeholder="域名，如 example.com">
+        <button class="btn primary" id="cfSave">保存</button>
+        <button class="btn" id="cfTest">检测连接</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="cfSync">同步封禁到边缘</button>
+        <button class="btn" id="cfRulesBtn">刷新规则</button>
+        <button class="btn" id="cfPurge">清空缓存</button>
+      </div>
+      <div id="cfResult" style="margin-top:10px"></div>
+      <div class="hint">
+        在这里封掉的 IP 会同时写进 Cloudflare 的 IP Access Rules（只建 block 规则，备注带前缀）。
+        这样请求在 CF 边缘就被拦掉，既到不了源站，也不占家里带宽、不进 access.log。
+        自动同步打开时，策略每次自动封禁都会顺手推一条。
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3>边缘规则</h3>
+        <span class="ch-note">点左侧「刷新规则」拉取</span>
+      </div>
+      <div class="tablewrap"><table id="cfList"></table></div>
+    </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="adm.sys">
+    <div class="cols c-55">
+      <div class="card">
+        <h3>面板登录</h3>
+        <div id="adm-auth"></div>
+        <div class="sep"></div>
+        <h4 style="margin:0 0 8px">修改面板密码</h4>
+        <div class="row" style="flex-direction:column;align-items:stretch;gap:8px;max-width:340px">
+          <input type="password" id="pwa1" placeholder="新密码（至少 12 位，含三类字符）" autocomplete="new-password">
+          <input type="password" id="pwa2" placeholder="再输一次" autocomplete="new-password">
+          <button class="btn primary" id="pwaBtn" style="align-self:flex-start">更新面板密码</button>
+        </div>
+        <div class="hint">访问本面板管理接口的登录密码（用户名固定 admin），和 root 密码不是一回事。改完当前页面会要求重新登录；忘记后只能从 PVE Console 删掉密码文件再用 deploy 重新生成。</div>
+      </div>
+      <div class="stack">
+        <div class="card tight">
+          <h3>安全建议</h3>
+          <div class="hint" style="margin:0">
+            面板只监听内网，公网到不了；basic auth 只挡人不挡扫描。
+            建议定期换一次密码，长度 12 位以上、三类字符。
+            root 密码改动会影响 SSH 登录，别和面板密码用同一个。
+          </div>
+        </div>
+        <div class="card tight">
+          <h3>版本</h3>
+          <div id="sysVer" class="kv2"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3>最近操作</h3>
+        <span class="ch-note">每次写操作都会落审计日志</span>
+      </div>
+      <div id="adm-audit"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ================= 策略 ================= -->
+  <section id="page-pol" class="hide">
+    <div class="pane" data-pane="pol.rule">
+    <div class="cols c-37">
+    <div class="stack">
+    <div class="card tight">
+      <h3>自动封禁</h3>
+      <div id="pol-switches"><div class="empty">读取中…</div></div>
+      <div class="hint">识别到可疑 IP 后自动下发到 nftables 和 nginx。建议先开「演练模式」观察一两天，确认没有误封再关掉它。</div>
+    </div>
+    <div class="card tight">
+      <h3>白名单</h3>
+      <div class="row">
+        <input type="text" id="wlIp" placeholder="1.2.3.4 或 10.0.0.0/8" style="flex:1;min-width:0">
+        <button class="btn primary" id="wlBtn">添加</button>
+      </div>
+      <div id="pol-wl" style="margin-top:10px"></div>
+      <div class="hint">白名单里的地址永远不会被自动封禁。自己的出口 IP 建议同时写进 own_ips。</div>
+    </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h3>策略规则</h3>
+        <span class="ch-note">按置信度从高到低评估</span>
+      </div>
+      <div class="tablewrap"><table class="rules" id="pol-rules"></table></div>
+      <div class="hint" id="pol-limits"></div>
+      <div class="hint">
+        窗口 = 统计最近多少秒（按整分钟对齐）；阈值 = 窗口内命中多少次触发；时长 = 封禁小时数（0 表示永久，会被上限截断）；层 = 下发到哪一层。
+        同一 IP 在复发窗口内再次触发，时长翻倍。单次评估最多封上限个数，命中多条时按置信度从高到低排。
+      </div>
+    </div>
+    </div>
+    </div>
+
+    <div class="pane" data-pane="pol.run">
+    <div class="cols c-37">
+    <div class="card">
+      <h3>手动评估</h3>
+      <div class="row">
+        <button class="btn" id="polPreview">演练一次（只看不封）</button>
+        <button class="btn danger" id="polApply">立即执行</button>
+      </div>
+      <div id="pol-result" style="margin-top:12px">
+        <div class="empty">点「演练一次」看看当前会封哪些 IP，只看不封。确认没问题再点「立即执行」。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h3>封禁记录</h3>
+        <span class="ch-note">点 IP 看它的完整档案</span>
+      </div>
+      <div class="tablewrap"><div id="pol-bans"></div></div>
+    </div>
+    </div>
+    </div>
+  </section>
+
+      <footer id="foot">数据源：nginx access.log（Cloudflare 还原真实 IP）· nftables 计数器 · journald · 归属地缓存 · 每分钟采集</footer>
+    </div><!-- /content -->
+  </main>
+</div><!-- /app -->
+
+<nav class="bottomnav" aria-label="底部导航">
+  <button data-tab="mon" class="on">
+    <svg viewBox="0 0 24 24"><path d="M2 12h4l2.5 7 3.5-14 3 7h7"/></svg>
+    <span>态势</span>
+  </button>
+  <button data-tab="adm">
+    <svg viewBox="0 0 24 24"><path d="M4 7h8M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/>
+      <circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+    <span>管理</span>
+  </button>
+  <button data-tab="pol">
+    <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.2-2.9 7.4-7 9.5-4.1-2.1-7-5.3-7-9.5V6z"/>
+      <path d="M12 8v4M12 15.5v.5"/></svg>
+    <span>策略</span>
+  </button>
+</nav>
+<div class="modal" id="modal" hidden aria-hidden="true">
+  <div class="mask" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mIp">
+    <div class="sheet-h">
+      <div style="min-width:0">
+        <h2 id="mIp">—</h2>
+        <div class="sheet-sub" id="mSub"></div>
+      </div>
+      <button class="iconbtn" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-b" id="mBody"></div>
+    <div class="sheet-f" id="mFoot"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 时间范围定义 ============
+   放在脚本最前面：hash 解析要用它，晚定义会在 TDZ 里炸掉整个脚本。 */
+const RANGES=[
+  {key:'10m',label:'10 分钟',g:'s'},
+  {key:'30m',label:'30 分钟',g:'s'},
+  {key:'1h',label:'1 小时',g:'s'},
+  {key:'2h',label:'2 小时',g:'s'},
+  {key:'6h',label:'6 小时',g:'s'},
+  {key:'12h',label:'12 小时',g:'s'},
+  {key:'3d',label:'3 天',g:'l',hint:'最近 3 天'},
+  {key:'7d',label:'周',g:'l',hint:'最近 7 天'},
+  {key:'30d',label:'月',g:'l',hint:'最近 30 天'},
+  {key:'90d',label:'季度',g:'l',hint:'最近 90 天'},
+  {key:'365d',label:'年',g:'l',hint:'最近 12 个月'},
+];
+let curRange='1h',lastData=null;
+
+/* ============ 通用 ============ */
+const fmt=n=>n>=10000?(n/1000).toFixed(1)+'k':String(n);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;}
+function row(cells,cls,left){const tr=el('tr');
+  cells.forEach((c,i)=>{const th=el('th',null,c);
+    if(i&&!(left||[]).includes(i))th.style.textAlign='right';tr.appendChild(th);});return tr;}
+let toastTimer=null;
+function toast(msg,isErr){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show'+(isErr?' err':'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{t.className='toast'+(isErr?' err':'');},3200);
+}
+function ts2str(ts){
+  if(!ts)return '永久';
+  const d=new Date(ts*1000),p=n=>String(n).padStart(2,'0');
+  return `${d.getMonth()+1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function mmss(sec){
+  sec=Math.max(0,Math.floor(sec||0));
+  const m=Math.floor(sec/60),s=sec%60;
+  return m?`${m} 分 ${String(s).padStart(2,'0')} 秒`:`${s} 秒`;
+}
+
+/* ============ 导航：侧栏切模块，顶部 tab 切模块内视图 ============ */
+const IC={
+  ov:'<svg viewBox="0 0 24 24"><path d="M2 12h4l2.5 7 3.5-14 3 7h7"/></svg>',
+  src:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>',
+  risk:'<svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v4M12 16.5v.5"/></svg>',
+  port:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.5M7 17h.5"/></svg>',
+  svc:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1.6"/><rect x="3" y="12" width="18" height="5" rx="1.6"/><path d="M7 6.5h.5M7 14.5h.5M12 19.5v2M9 21.5h6"/></svg>',
+  acct:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>',
+  ban:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  cf:'<svg viewBox="0 0 24 24"><path d="M6.5 18h11a3.5 3.5 0 0 0 .4-6.98A5.5 5.5 0 0 0 7.2 9.3A4.35 4.35 0 0 0 6.5 18z"/></svg>',
+  log:'<svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>',
+  rule:'<svg viewBox="0 0 24 24"><path d="M4 7h8M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
+  wl:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.2-2.9 7.4-7 9.5-4.1-2.1-7-5.3-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  run:'<svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg>',
+  fw:'<svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M9 4v4M15 10v4M9 16v4"/></svg>',
+  geo:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17"/><path d="M12 3c2.4 3 2.4 15 0 18M12 3c-2.4 3-2.4 15 0 18"/></svg>',
+};
+
+const NAV={
+  mon:{id:'page-mon',title:'态势',sub:'家庭公网入口的实时流量与威胁概览',panes:[
+    ['ov','概览','实时请求量、拦截与关键指标',IC.ov],
+    ['src','来源','来源 IP、被探路径与地区分布',IC.src],
+    ['risk','异常','异常请求、SSH 爆破与敏感文件命中',IC.risk]]},
+  adm:{id:'page-adm',title:'管理',sub:'端口、防火墙、地域封锁、服务守护、封禁与边缘规则',panes:[
+    ['port','端口','对外端口与出入站类型',IC.port],
+    ['fw','防火墙','有序规则、默认策略、白名单与命中计数',IC.fw],
+    ['geo','地域','境外 IP 自动识别，外来 / 对外分别封锁',IC.geo],
+    ['svc','服务','进程守护、SSH 通道与采集健康',IC.svc],
+    ['ban','封禁','手动封禁与封禁响应方式',IC.ban],
+    ['cf','边缘','Cloudflare 边缘规则与缓存',IC.cf],
+    ['sys','系统','面板登录密码与操作记录',IC.log]]},
+  pol:{id:'page-pol',title:'策略',sub:'自动封禁的规则、白名单与执行记录',panes:[
+    ['rule','规则','自动封禁开关、规则与白名单',IC.rule],
+    ['run','执行','手动演练、立即执行与封禁记录',IC.run]]},
+};
+
+let adminLoaded=false,polLoaded=false,curTab='mon',curPane='';
+const lastPane={};
+
+function setHash(){
+  const h='#'+curTab+'.'+curPane+(curRange&&curRange!=='1h'?'@'+curRange:'');
+  try{if(location.hash!==h)history.replaceState(null,'',h);}catch(e){location.hash=h;}
+}
+
+/* 顶部 tab 栏按当前模块重建 */
+function renderTabbar(){
+  const bar=document.getElementById('tabbar');
+  bar.innerHTML='';
+  NAV[curTab].panes.forEach(([k,t])=>{
+    const on=(k===curPane);
+    const b=el('button','tab'+(on?' on':''));
+    b.type='button';b.setAttribute('role','tab');
+    b.setAttribute('aria-selected',on?'true':'false');
+    b.tabIndex=on?0:-1;
+    b.dataset.pane=curTab+'.'+k;
+    b.innerHTML=NAV[curTab].panes.find(p=>p[0]===k)[3];
+    b.appendChild(el('span',null,t));
+    b.addEventListener('click',()=>switchPane(curTab,k));
+    b.addEventListener('keydown',ev=>{
+      const i=NAV[curTab].panes.findIndex(p=>p[0]===k);
+      if(ev.key==='ArrowRight'||ev.key==='ArrowLeft'){
+        ev.preventDefault();
+        const n=(i+(ev.key==='ArrowRight'?1:-1)+NAV[curTab].panes.length)%NAV[curTab].panes.length;
+        switchPane(curTab,NAV[curTab].panes[n][0]);
+        const nx=bar.children[n];if(nx)nx.focus();
+      }
+    });
+    bar.appendChild(b);
+  });
+}
+
+/* 切模块内视图 */
+function switchPane(mod,k,opts){
+  opts=opts||{};
+  const panes=NAV[mod].panes;
+  if(!panes.some(p=>p[0]===k))k=panes[0][0];
+  curPane=k;lastPane[mod]=k;
+
+  document.querySelectorAll('[data-pane]').forEach(p=>{
+    p.classList.toggle('on',p.dataset.pane===mod+'.'+k);
+  });
+  renderTabbar();
+
+  const desc=(panes.find(p=>p[0]===k)||[])[2]||'';
+  document.getElementById('pageTitle').textContent=NAV[mod].title;
+  document.getElementById('pageSub').textContent=desc;
+  if(!opts.keepHash)setHash();
+  if(!opts.keepScroll&&window.scrollTo)window.scrollTo(0,0);
+}
+
+function switchTab(name,opts){
+  opts=opts||{};
+  if(!NAV[name])name='mon';
+  curTab=name;
+
+  Object.keys(NAV).forEach(k=>{
+    const on=(k===name);
+    document.querySelectorAll('[data-tab="'+k+'"]').forEach(b=>{
+      b.classList.toggle('on',on);
+      if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+    });
+    const sec=document.getElementById(NAV[k].id);
+    sec.classList.toggle('hide',!on);
+  });
+
+  const want=opts.pane||lastPane[name]||NAV[name].panes[0][0];
+  switchPane(name,want,{keepHash:true,keepScroll:opts.keepScroll});
+
+  if(name==='adm'&&!adminLoaded){adminLoaded=true;loadAdmin();}
+  if(name==='pol'&&!polLoaded){polLoaded=true;loadPolicy();}
+}
+
+document.querySelectorAll('[data-tab]').forEach(b=>{
+  b.addEventListener('click',()=>switchTab(b.dataset.tab));
+});
+
+/* 键盘 1 / 2 / 3 切模块，[ / ] 切视图，输入框里不抢键 */
+document.addEventListener('keydown',ev=>{
+  if(ev.ctrlKey||ev.metaKey||ev.altKey)return;
+  const tag=(ev.target&&ev.target.tagName)||'';
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag))return;
+  const map={'1':'mon','2':'adm','3':'pol'};
+  if(map[ev.key]){switchTab(map[ev.key]);ev.preventDefault();return;}
+  if(ev.key==='r'||ev.key==='R'){manualRefresh();ev.preventDefault();return;}
+  if(ev.key==='['||ev.key===']'){
+    const ps=NAV[curTab].panes,i=ps.findIndex(p=>p[0]===curPane);
+    const n=(i+(ev.key===']'?1:-1)+ps.length)%ps.length;
+    switchPane(curTab,ps[n][0]);ev.preventDefault();
+  }
+});
+
+/* 浏览器前进/后退、直接带 hash 打开：#mon 或 #mon.src ，可带 @6h 指定范围 */
+function parseHash(){
+  let h=(location.hash||'').replace('#','');
+  let rg='';
+  const at=h.indexOf('@');
+  if(at>=0){rg=h.slice(at+1);h=h.slice(0,at);}
+  const [mod,pane]=h.split('.');
+  return {mod:NAV[mod]?mod:'mon',pane:pane||'',rg:rg};
+}
+window.addEventListener('hashchange',()=>{
+  const {mod,pane,rg}=parseHash();
+  if(rg&&RANGES.some(r=>r.key===rg)&&rg!==curRange)loadSeries(rg);
+  if(mod!==curTab)switchTab(mod,{pane:pane,keepScroll:true});
+  else if(pane&&pane!==curPane)switchPane(mod,pane);
+});
+(function(){
+  const h=parseHash();
+  if(h.rg&&RANGES.some(r=>r.key===h.rg))curRange=h.rg;
+  switchTab(h.mod,{pane:h.pane,keepScroll:true});
+})();
+
+/* 国家代码：用两字母徽标，不依赖 emoji 字体（服务器截图里国旗经常渲染成字母） */
+function flag(cc){
+  cc=(cc||'').toUpperCase();
+  return cc.length===2?cc:'—';
+}
+
+/* ============ 通用小零件 ============ */
+/* 全局封禁表：{ip: {nft,nginx,cf,until,reason,auto,label}}。
+   来源是 /api/state、/api/range、/api/bans 三处返回的同一份数据，
+   任何列表调 ipSpan 都会自动带上「已封禁」标，不再各画各的。 */
+let BANMAP={};
+function setBanMap(m){BANMAP=m||{};}
+function banOf(ip){return BANMAP[ip];}
+function banLayerText(b){
+  if(!b)return '';
+  return (b.layers&&b.layers.length?b.layers:['nft']).map(k=>
+    k==='cf'?'Cloudflare':k).join(' + ');
+}
+
+/* 所有 IP 都走这个函数生成，保证"到哪都能点开档案" */
+function ipSpan(ip,opts){
+  opts=opts||{};
+  const ban=banOf(ip);
+  const s=el('span','ip'+(opts.cls?' '+opts.cls:'')+(ban&&!opts.cls?' banned':''),ip);
+  s.dataset.ip=ip;
+  s.title=ban
+    ? '已封禁（'+banLayerText(ban)+'）· 点击查看 '+ip+' 的档案，可直接解封'
+    : '点击查看 '+ip+' 的访问档案，可直接封禁';
+  if(opts.flag)s.dataset.flag='1';
+  if(ban&&opts.tag!==false){
+    const w=el('span','ipw');
+    w.appendChild(s);
+    w.appendChild(el('span','ban-tag','已封禁'));
+    return w;
+  }
+  return s;
+}
+
+/* 一键封禁 / 解封。列表里就这么一个按钮，状态来自 BANMAP，点完同步刷新 */
+function banToggle(ip,opts){
+  opts=opts||{};
+  const ban=banOf(ip);
+  const btn=el('button','btn '+(ban?'':'danger'),ban?'解封':'封禁');
+  btn.type='button';
+  btn.title=ban
+    ? '已封禁（'+banLayerText(ban)+'）· 点击解封'
+    : '一键封禁 '+(opts.hours||24)+' 小时：nginx + nftables 同时下发';
+  btn.onclick=()=>{
+    if(ban){
+      if(!confirm('解封 '+ip+'？\n\n三层（nftables / nginx / Cloudflare）一起解。'))return;
+      btn.disabled=true;
+      api('ip.unblock',{ip:ip})
+        .then(r=>{toast(r.result.msg);afterBanChange(r);})
+        .catch(e=>{toast(e.message,true);btn.disabled=false;});
+      return;
+    }
+    if(!confirm('封禁 '+ip+' '+(opts.hours||24)+' 小时？\n\nnginx 和 nftables 同时下发'+
+      '（配了 Cloudflare 再推一条边缘规则）。'+
+      (opts.reason?'\n\n原因：'+opts.reason:'')))return;
+    btn.disabled=true;
+    api('ip.block',{ip:ip,hours:opts.hours||24,layer:'both',
+      reason:opts.reason||'面板一键封禁'})
+      .then(r=>{toast(r.result.msg);afterBanChange(r);})
+      .catch(e=>{toast(e.message,true);btn.disabled=false;});
+  };
+  return btn;
+}
+
+/* 封禁状态变了：更新全局表，重画当前页 */
+function afterBanChange(res){
+  const st=res&&res.data;
+  if(st&&st.banned)setBanMap(st.banned);
+  if(adminLoaded&&st)renderAdmin(st);
+  loadRange();
+}
+function refreshBans(){
+  return fetch('/api/bans',{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(j&&j.ok){setBanMap(j.data.banned);return j.data;}
+      return null;
+    })
+    .catch(()=>null);
+}
+function badge(txt,kind){
+  return el('span','badge'+(kind?' '+kind:''),txt);
+}
+function dirIcon(mode){
+  const w=el('span','dir'+(mode&&mode!=='allow'?' '+mode:''));
+  w.appendChild(el('i'));
+  w.appendChild(el('span',null,MODE_LABEL[mode]||mode||'—'));
+  return w;
+}
+const MODE_LABEL={allow:'全部放行',lan:'仅内网',cf:'仅 Cloudflare',deny:'禁止',none:'—'};
+
+/* ============ 时间范围：短窗看波动，长窗看趋势 ============ */
+let rangeReady=false,snapReady=false,lastSnap=null,lastSeries=null;
+
+function buildRangebars(){
+  document.querySelectorAll('.rangebar[data-rb]').forEach(bar=>{
+    bar.innerHTML='';
+    const mk=r=>{
+      const b=el('button','rg'+(r.key===curRange?' on':''));
+      b.type='button';b.dataset.rg=r.key;b.textContent=r.label;
+      if(r.hint)b.title=r.hint;
+      b.addEventListener('click',()=>loadRange(r.key));
+      return b;
+    };
+    const g1=el('div','grp');RANGES.filter(r=>r.g==='s').forEach(r=>g1.appendChild(mk(r)));
+    const g2=el('div','grp');RANGES.filter(r=>r.g==='l').forEach(r=>g2.appendChild(mk(r)));
+    bar.appendChild(g1);bar.appendChild(el('div','sep2'));bar.appendChild(g2);
+    const tip=el('span','tip rtip','');bar.appendChild(tip);
+  });
+}
+
+function paintRange(){
+  document.querySelectorAll('.rg').forEach(b=>b.classList.toggle('on',b.dataset.rg===curRange));
+}
+
+function loadRange(key){
+  if(key)curRange=key;
+  paintRange();setHash();
+  document.querySelectorAll('.rtip').forEach(t=>{t.textContent='读取中…';t.style.color='';});
+  fetch('/api/range?range='+encodeURIComponent(curRange),{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)throw new Error((j&&j.error)||'读取失败');
+      snapReady=true;
+      /* 先更新封禁表再渲染：列表里「已封禁」标和按钮状态都靠它 */
+      if(j.data.snap&&j.data.snap.banned)setBanMap(j.data.snap.banned);
+      applySeries(j.data.series);
+      applySources(j.data.snap);
+      applyRisk(j.data.snap);
+    })
+    .catch(()=>{
+      fetch('/api/series?range='+encodeURIComponent(curRange),{credentials:'same-origin'})
+        .then(r=>r.json())
+        .then(j=>{if(!j||!j.ok)throw new Error('x');applySeries(j.data);})
+        .catch(()=>{
+          document.querySelectorAll('.rtip').forEach(t=>{
+            t.textContent='区间接口不可用，暂时显示最近 3 小时';t.style.color='var(--amber)';
+          });
+          if(lastData)drawPoints(lastData.timeline||[]);
+        });
+    });
+}
+
+/* 兼容旧调用名 */
+function loadSeries(key){loadRange(key);}
+
+function applySeries(d){
+  rangeReady=true;lastSeries=d;
+  const pts=d.points||[];
+  drawPoints(pts);
+
+  const s=d.sum||{};
+  const peak=Math.max(0,...pts.map(p=>p.b+p.p));
+  const box=document.getElementById('rangeSum');
+  box.innerHTML='';
+  [['请求总量',fmt(s.total||0),''],
+   ['被拦截',fmt(s.blocked||0),'red'],
+   ['正常访问',fmt(s.passed||0),'blue'],
+   ['区间峰值',fmt(peak),''],
+   ['独立来源',fmt(s.ips||0),'']].forEach(([k,v,c])=>{
+    const line=el('div','kv');
+    line.appendChild(el('span',null,k));
+    line.appendChild(el('b',c||null,v));
+    box.appendChild(line);
+  });
+
+  const t=document.getElementById('rangeTop');
+  t.innerHTML='';
+  t.appendChild(row(['IP','请求','拦截',''],'th',[0,3]));
+  const top=(d.top||[]).slice(0,8);
+  if(!top.length){
+    const tr=el('tr');const td=el('td','empty','该区间没有请求');td.colSpan=4;
+    tr.appendChild(td);t.appendChild(tr);
+  }
+  top.forEach(x=>{
+    const tr=el('tr');
+    const c0=el('td');c0.appendChild(ipSpan(x.ip));tr.appendChild(c0);
+    tr.appendChild(el('td','n',fmt(x.n)));
+    const c=el('td','n',fmt(x.blocked));if(x.blocked)c.style.color='var(--red)';
+    tr.appendChild(c);
+    const ca=el('td');ca.style.textAlign='right';
+    ca.appendChild(banToggle(x.ip,{reason:'高频来源一键封禁'}));
+    tr.appendChild(ca);t.appendChild(tr);
+  });
+
+  const step=d.step>=3600?((d.step/3600)%1?(d.step/3600).toFixed(1):d.step/3600)+' 小时/柱'
+    :d.step>=60?d.step/60+' 分钟/柱':d.step+' 秒/柱';
+  document.getElementById('chartNote').textContent=d.label+' · '+step;
+
+  document.querySelectorAll('.rtip').forEach(tip=>{
+    if(d.truncated){
+      const days=Math.max(1,Math.round(d.covered/86400));
+      tip.textContent='库里只有最近 '+days+' 天数据';tip.style.color='var(--amber)';
+    }else{tip.textContent='';}
+  });
+}
+
+/* ---- 来源视图 ---- */
+function applySources(s){
+  if(!s)return;
+  lastSnap=s;
+  const note=document.getElementById('srcNote');
+  if(note)note.textContent=s.label+' · '+(s.ips||[]).length+' 个来源 · 点 IP 看档案';
+
+  const ips=document.getElementById('ips');
+  ips.innerHTML='';
+  ips.appendChild(row(['IP / 归属','地区','请求','被拦','最后出现',''],'th',[1,5]));
+  const list=(s.ips||[]).slice(0,14);
+  if(!list.length){
+    const tr=el('tr');const td=el('td','empty','该区间没有来源记录');td.colSpan=6;
+    tr.appendChild(td);ips.appendChild(tr);
+  }
+  list.forEach(r=>{
+    const tr=el('tr');
+    const c1=el('td');
+    const gl=r.label||(r.geo&&r.geo.label)||'';
+    const line=el('div');line.appendChild(ipSpan(r.ip,r.own?{cls:'mine'}:{}));
+    if(r.own)line.appendChild(el('span','tag own','我的'));
+    if(gl){
+      const gi=el('span','geo-in');
+      gi.appendChild(el('span','cc',flag(r.geo&&r.geo.cc)));
+      gi.appendChild(document.createTextNode(gl));
+      line.appendChild(gi);
+    }
+    c1.appendChild(line);
+    if(r.ua){const u=el('div','ua',r.ua);u.title=r.ua;c1.appendChild(u);}
+    tr.appendChild(c1);
+
+    const cg=el('td','geo');
+    if(gl){cg.appendChild(el('span','cc',flag(r.geo&&r.geo.cc)));cg.appendChild(document.createTextNode(gl));}
+    else cg.textContent='—';
+    tr.appendChild(cg);
+    tr.appendChild(el('td','n',fmt(r.n)));
+    const cb=el('td','n',fmt(r.blocked));if(r.blocked)cb.style.color='var(--red)';
+    tr.appendChild(cb);
+    tr.appendChild(el('td','n',r.last?ts2str(r.last):'—'));
+    const ca=el('td');ca.style.textAlign='right';
+    ca.appendChild(banToggle(r.ip,{reason:'来源表一键封禁'}));
+    tr.appendChild(ca);
+    ips.appendChild(tr);
+  });
+
+  /* 地区 */
+  const gbox=document.getElementById('geo');gbox.innerHTML='';
+  const gtop=s.geo||[];
+  if(!gtop.length){
+    gbox.appendChild(el('div','empty','还没有归属地数据，采集会自动补全'));
+  }else{
+    const total=Math.max(1,(s.ips||[]).reduce((a,x)=>a+ (x.n||0),0));
+    gtop.slice(0,6).forEach(g=>{
+      const wrap=el('div');wrap.style.margin='6px 0';
+      const line=el('div','row');line.style.justifyContent='space-between';
+      const name=el('span');
+      name.appendChild(el('span','cc',flag(g.cc)));
+      name.appendChild(document.createTextNode(g.country||'未知'));
+      line.appendChild(name);
+      const pct=Math.round(g.n/total*100);
+      line.appendChild(el('span','mono',fmt(g.n)+' · '+pct+'%'));
+      wrap.appendChild(line);
+      const bar=el('div','bar');const fill=el('i');
+      fill.style.width=Math.max(2,Math.min(100,pct))+'%';bar.appendChild(fill);wrap.appendChild(bar);
+      gbox.appendChild(wrap);
+    });
+  }
+
+  /* 状态码 */
+  const sbox=document.getElementById('status');sbox.innerHTML='';
+  const st=(s.status||[]);
+  if(!st.length){
+    sbox.appendChild(el('div','empty','该区间没有响应记录'));
+  }else{
+    const total=Math.max(1,st.reduce((a,x)=>a+x.n,0));
+    st.forEach(x=>{
+      const wrap=el('div');wrap.style.margin='6px 0';
+      const line=el('div','row');line.style.justifyContent='space-between';
+      const code=x.code;
+      const kind=(code>=500)?'bad':(code>=400)?'amber':(code>=300)?'':(code>=200?'green':'');
+      line.appendChild(badge(String(code),kind));
+      line.appendChild(el('span','mono',fmt(x.n)+' · '+Math.round(x.n*100/total)+'%'));
+      wrap.appendChild(line);
+      const bar=el('div','bar');const fill=el('i');
+      fill.style.width=Math.max(2,Math.round(x.n*100/total))+'%';
+      fill.style.background=(code>=400)?'var(--red)':'var(--blue)';
+      bar.appendChild(fill);wrap.appendChild(bar);sbox.appendChild(wrap);
+    });
+  }
+
+  /* 被探路径 */
+  const pb=document.getElementById('paths');pb.innerHTML='';
+  const pn=document.getElementById('pathNote');
+  if(pn)pn.textContent=s.label+' · 点击复制路径';
+  const paths=s.paths||[];
+  if(!paths.length){
+    pb.appendChild(el('div','empty','该区间没有被探测路径'));
+  }else{
+    const wrap=el('div','pathwrap');
+    paths.forEach(r=>{
+      const c=el('div','pathchip');
+      c.appendChild(el('span',null,r.path));
+      c.appendChild(el('b',null,fmt(r.n)));
+      if(r.ips)c.appendChild(el('b',null,'· '+r.ips+' IP'));
+      c.title=r.path+' · '+r.n+' 次'+(r.ips?' · '+r.ips+' 个来源':'')+'；点击复制';
+      c.style.cursor='pointer';
+      c.onclick=()=>copyPath(r.path);
+      wrap.appendChild(c);
+    });
+    pb.appendChild(wrap);
+  }
+}
+
+function copyPath(p){
+  try{
+    navigator.clipboard.writeText(p);
+    toast('已复制 '+p);
+  }catch(e){toast(p);}
+}
+
+/* ---- 异常视图 ---- */
+function applyRisk(s){
+  if(!s)return;
+  const an=document.getElementById('anomaly');an.innerHTML='';
+  const list=s.anomaly||[];
+  if(!list.length){
+    an.appendChild(el('div','empty','该区间没有异常特征命中'));
+  }else{
+    const t=el('table');
+    t.appendChild(row(['类型 / 来源 IP','次数','涉及 IP','峰值'],'th',[0]));
+    list.forEach(x=>{
+      const tr=el('tr','link');
+      tr.title='点这一行查看每个来源 IP 的明细';
+      tr.onclick=ev=>{
+        if(ev.target.closest('.ip')||ev.target.closest('button'))return;
+        openAnomaly(x.kind);
+      };
+
+      const c1=el('td');
+      const head=el('div');
+      head.appendChild(el('b',null,x.label||x.kind));
+      c1.appendChild(head);
+
+      /* 来源 IP 直接铺在类型下面：不用点开也知道是谁干的 */
+      const wrap=el('div','an-ips');
+      const tops=(x.top||[]).slice(0,3);
+      tops.forEach(o=>{
+        wrap.appendChild(ipSpan(o.ip));
+        wrap.appendChild(el('span','ch-note',fmt(o.n)));
+      });
+      if(tops.length){
+        const more=el('button','an-more',
+          (x.ips||0)>tops.length?'全部 '+(x.ips||0)+' 个来源':'明细');
+        more.type='button';
+        more.onclick=ev=>{ev.stopPropagation();openAnomaly(x.kind);};
+        wrap.appendChild(more);
+      }else{
+        wrap.appendChild(el('span','ch-note','点这一行看来源 IP'));
+      }
+      c1.appendChild(wrap);
+      tr.appendChild(c1);
+
+      const c2=el('td','n',fmt(x.n));c2.style.color='var(--amber)';tr.appendChild(c2);
+      tr.appendChild(el('td','n',fmt(x.ips||0)));
+      tr.appendChild(el('td','n',fmt(x.vmax||0)));
+      t.appendChild(tr);
+    });
+    an.appendChild(t);
+  }
+
+  const sh=document.getElementById('ssh');sh.innerHTML='';
+  const ssh=s.ssh||{};
+  const p=el('div');p.style.fontSize='13px';
+  p.innerHTML='SSH 爆破尝试 <b>'+fmt(ssh.total||0)+'</b> 次';
+  sh.appendChild(p);
+  const top=ssh.top||[];
+  if(!top.length){
+    sh.appendChild(el('div','empty','该区间没有失败登录'));
+  }else{
+    const t=el('table');t.style.marginTop='8px';
+    t.appendChild(row(['来源 IP','次数','最后',''],'th',[0,3]));
+    top.forEach(r=>{
+      const tr=el('tr');
+      const c=el('td');c.appendChild(ipSpan(r.ip));tr.appendChild(c);
+      tr.appendChild(el('td','n',fmt(r.n)));
+      tr.appendChild(el('td','n',ts2str(r.last)));
+      const ca=el('td');ca.style.textAlign='right';
+      ca.appendChild(banToggle(r.ip,{reason:'SSH 爆破'}));
+      tr.appendChild(ca);
+      t.appendChild(tr);
+    });
+    sh.appendChild(t);
+  }
+
+  const lk=document.getElementById('leak');lk.innerHTML='';
+  const leaks=s.leak||[];
+  if(!leaks.length){
+    lk.appendChild(el('div','empty','无。该区间没有任何敏感路径返回过真实内容。'));
+  }else{
+    const t=el('table');
+    t.appendChild(row(['路径','来源 IP','大小','时间',''],'th',[0,4]));
+    leaks.forEach(r=>{
+      const tr=el('tr');
+      tr.appendChild(el('td','p',r.path));
+      const c=el('td');c.appendChild(ipSpan(r.ip));tr.appendChild(c);
+      tr.appendChild(el('td','n',(r.sz/1024).toFixed(1)+' KB'));
+      tr.appendChild(el('td','n',ts2str(r.ts)));
+      const a=el('td');a.style.textAlign='right';
+      a.appendChild(banToggle(r.ip,{reason:'敏感文件命中'}));
+      tr.appendChild(a);
+      t.appendChild(tr);
+    });
+    lk.appendChild(t);
+  }
+}
+
+/* ============ 态势 ============ */
+function render(d){
+  lastData=d;
+  const b=document.getElementById('banner');
+  b.className='banner '+(d.level==='yellow'?'yellow':d.level==='red'?'red':'green');
+  document.getElementById('bannerText').textContent=d.msg;
+  document.getElementById('stamp').textContent='更新于 '+d.generated_at_str;
+
+  /* 顶栏状态胶囊与侧栏指示点，跟随整体级别 */
+  const lv=d.level==='red'?'bad':d.level==='yellow'?'warn':'ok';
+  const chip=document.getElementById('liveChip');
+  chip.className='chip '+lv;
+  document.getElementById('liveText').textContent=
+    lv==='ok'?'安静':lv==='warn'?'有探测':'正在被扫描';
+  document.getElementById('sideDot').className=(lv==='ok'?'':lv);
+  document.getElementById('sideState').textContent=
+    lv==='ok'?'运行正常':lv==='warn'?'有零星探测':'正在被扫描';
+
+  const tot=d.kpi.total_today||0, blk=d.kpi.blocked_today||0;
+  document.getElementById('ssTotal').textContent=fmt(tot);
+  document.getElementById('ssBlocked').textContent=fmt(blk);
+  document.getElementById('ssRate').textContent=(tot?Math.round(blk*100/tot):0)+'%';
+
+  const k=d.kpi;
+  const items=d.net_items||[];
+  const dropTotal=items.reduce((s,x)=>s+(x.value||0),0);
+  const cards=[
+    ['今日请求',fmt(k.total_today),''],
+    ['已拦截',fmt(k.blocked_today),'var(--red)'],
+    ['正常访问',fmt(k.passed_today),'var(--blue)'],
+    ['近10分钟拦截',fmt(k.blocked_10m),k.blocked_10m>0?'var(--red)':''],
+    ['SSH 爆破/今日',fmt(k.ssh_today),k.ssh_today>0?'var(--amber)':''],
+    ['自动封禁/今日',fmt(k.auto_bans_today||0),(k.auto_bans_today?'var(--red)':'')],
+    ['防火墙丢包',fmt(dropTotal),''],
+  ];
+  const box=document.getElementById('kpis');box.innerHTML='';
+  cards.forEach(([l,v,c])=>{const w=el('div','kpi');const a=el('div','v',v);if(c)a.style.color=c;
+    w.appendChild(a);w.appendChild(el('div','l',l));box.appendChild(w);});
+
+  /* 用户选了时间范围就不要再被 15 秒轮询打回 3 小时 */
+  if(!rangeReady)drawPoints(d.timeline||[]);
+
+  /* 来源/异常两块由区间接口驱动；接口没回来之前，先用 data.json 兜底一次。
+     一旦 snapReady 就不再被 15 秒轮询覆盖，否则用户选的范围会被打回 24 小时。 */
+  if(!snapReady){
+    applySources({
+      label:'近 24 小时',
+      ips:(d.ips||[]).map(x=>({ip:x.ip,n:x.n,blocked:x.blocked,last:0,
+        own:x.own,ua:x.ua,geo:x.geo,label:(x.geo&&x.geo.label)||''})),
+      geo:d.geo_top||[],status:[],
+      paths:(d.paths||[]).map(x=>({path:x.path,n:x.n,ips:0})),
+    });
+    applyRisk({
+      anomaly:d.anomaly||[],
+      ssh:{total:k.ssh_today||0,top:d.ssh_top||[]},
+      leak:d.leak||[],
+    });
+  }
+
+  renderOv(d);
+}
+
+/* 概览底部的两块摘要：异常分布 + 最近封禁 */
+function renderOv(d){
+  const ab=document.getElementById('ov-anomaly');
+  if(ab){
+    ab.innerHTML='';
+    const an=d.anomaly||[];
+    if(!an.length){
+      ab.appendChild(el('div','empty','近 60 分钟没有异常特征命中'));
+    }else{
+      const max=Math.max(1,...an.map(x=>x.n));
+      an.slice(0,5).forEach(x=>{
+        const w=el('div');w.style.margin='7px 0';
+        const line=el('div','row');
+        line.style.justifyContent='space-between';
+        line.appendChild(el('span',null,x.label+(x.ips?'  ·  '+x.ips+' IP':'')));
+        const n=el('b',null,fmt(x.n));
+        n.style.fontVariantNumeric='tabular-nums';
+        line.appendChild(n);w.appendChild(line);
+        const bar=el('div','bar');
+        const i=el('i');
+        i.style.width=Math.max(3,Math.round(x.n/max*100))+'%';
+        i.style.background='var(--red)';
+        bar.appendChild(i);w.appendChild(bar);ab.appendChild(w);
+      });
+    }
+  }
+  const bb=document.getElementById('ov-bans');
+  if(bb){
+    bb.innerHTML='';
+    const last=(d.policy&&d.policy.last)||{};
+    const list=last.banned||[];
+    if(!list.length){
+      bb.appendChild(el('div','empty',last.msg||'最近没有自动封禁'));
+    }else{
+      list.slice(0,5).forEach(x=>{
+        const line=el('div','kv');
+        const left=el('span');
+        left.appendChild(ipSpan(x.ip));
+        line.appendChild(left);
+        line.appendChild(el('b',null,
+          (x.geo?x.geo+' · ':'')+(x.hours?x.hours+' 小时':'永久')));
+        bb.appendChild(line);
+      });
+    }
+  }
+}
+
+function renderGeo(d){
+  const box=document.getElementById('geo');box.innerHTML='';
+  const top=d.geo_top||[];
+  if(!top.length){
+    box.appendChild(el('div','empty','还没有归属地数据。下一轮采集会自动补全请求量靠前的 IP。'));
+    return;
+  }
+  const total=Math.max(1,d.total_24h||0);
+  top.forEach(g=>{
+    const wrap=el('div');wrap.style.margin='7px 0';
+    const line=el('div','row');line.style.justifyContent='space-between';
+    const name=el('span');
+    name.appendChild(el('span','cc',flag(g.cc)));
+    name.appendChild(document.createTextNode(g.country||'未知'));
+    line.appendChild(name);
+    const pct=Math.round(g.n/total*100);
+    line.appendChild(el('span','mono',fmt(g.n)+' 次 · '+pct+'%'));
+    wrap.appendChild(line);
+    const bar=el('div','bar');const fill=el('i');
+    fill.style.width=Math.max(2,pct)+'%';bar.appendChild(fill);wrap.appendChild(bar);
+    box.appendChild(wrap);
+  });
+  if((d.geo_known||0)<(d.total_24h||0)){
+    box.appendChild(el('div','hint','另有 '+(d.total_24h-d.geo_known)+
+      ' 次请求的来源尚未识别，会随采集逐步补齐。'));
+  }
+}
+
+/* 异常请求：采集时按 kind 聚合，这里只做展示 */
+function renderAnomaly(list){
+  const box=document.getElementById('anomaly');box.innerHTML='';
+  if(!list.length){
+    box.appendChild(el('div','empty','近 60 分钟没有发现异常请求。'));
+    return;
+  }
+  const t=el('table');
+  t.appendChild(row(['类型','次数','涉及 IP'],'th',[0]));
+  list.forEach(x=>{
+    const tr=el('tr');
+    tr.appendChild(el('td',null,x.label||x.kind));
+    const c2=el('td','n',fmt(x.n));c2.style.color='var(--amber)';tr.appendChild(c2);
+    tr.appendChild(el('td','n',fmt(x.ips)));t.appendChild(tr);
+  });
+  box.appendChild(t);
+}
+
+/* 柱子只画图形，文字走 HTML——svg 用了 preserveAspectRatio:none，
+   放进去的字会被横向拉变形。 */
+function drawPoints(pts){
+  const svg=document.getElementById('chart');
+  if(!svg)return;
+  svg.innerHTML='';
+  const W=900,H=210,top=8,bottom=4;
+  const n=pts.length||1;
+  const max=Math.max(1,...pts.map(x=>x.b+x.p));
+  const bw=W/n;
+  const gap=n>240?0:1;
+  pts.forEach((x,i)=>{
+    const tot=x.b+x.p;
+    if(!tot)return;
+    const h=(H-top-bottom)*tot/max;
+    const hb=(H-top-bottom)*x.b/max;
+    const mk=(y,hh,fill)=>{
+      const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x',(i*bw).toFixed(2));
+      r.setAttribute('width',Math.max(0.8,bw-gap).toFixed(2));
+      r.setAttribute('y',y.toFixed(2));
+      r.setAttribute('height',hh.toFixed(2));
+      r.setAttribute('fill',fill);
+      svg.appendChild(r);
+    };
+    mk(H-bottom-h,h,'var(--blue)');
+    if(hb>0.4)mk(H-bottom-hb,hb,'var(--red)');
+  });
+  const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+  ln.setAttribute('x1',0);ln.setAttribute('x2',W);
+  ln.setAttribute('y1',H-bottom);ln.setAttribute('y2',H-bottom);
+  ln.setAttribute('stroke','var(--line)');ln.setAttribute('stroke-width','1');
+  svg.appendChild(ln);
+  drawAxis(pts);
+}
+
+function drawAxis(pts){
+  const box=document.getElementById('chartX');
+  if(!box)return;
+  box.innerHTML='';
+  const n=pts.length;
+  if(!n)return;
+  const step=(n>1?pts[1].t-pts[0].t:60)||60;
+  const span=n*step;
+  const p=s=>String(s).padStart(2,'0');
+  const marks=span>86400*2?4:5;
+  for(let i=0;i<marks;i++){
+    const idx=Math.min(n-1,Math.round(i*(n-1)/(marks-1)));
+    const d=new Date(pts[idx].t*1000);
+    box.appendChild(el('span',null,
+      span>86400*2?(d.getMonth()+1)+'-'+p(d.getDate()):p(d.getHours())+':'+p(d.getMinutes())));
+  }
+}
+
+function tick(){
+  fetch('data.json?t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.json()).then(render)
+    .catch(()=>{
+      document.getElementById('stamp').textContent='连接失败，重试中…';
+      const chip=document.getElementById('liveChip');
+      if(chip){
+        chip.className='chip bad';
+        document.getElementById('liveText').textContent='连接失败';
+        document.getElementById('sideDot').className='bad';
+        document.getElementById('sideState').textContent='连接失败';
+      }
+    });
+}
+
+/* 手动刷新：转一下图标，数据到了 chip 会自己变 */
+function manualRefresh(){
+  const b=document.getElementById('refreshBtn');
+  if(b){b.classList.add('busy');setTimeout(()=>b.classList.remove('busy'),700);}
+  tick();
+}
+document.getElementById('refreshBtn').onclick=manualRefresh;
+
+/* ============ IP 档案弹窗 ============
+   任何地方点 IP 都走这里：先看它干了什么，再决定封不封。
+   封禁/解封/白名单都在弹窗里闭环，不用再跳到「封禁」页。 */
+let mIp=null,mHours=24,mBanHours=24,mData=null;
+
+function ipHoursText(h){
+  if(h>=24*365)return '全部';
+  if(h>=24)return (h/24)+' 天';
+  return h+' 小时';
+}
+
+function openIp(ip,hours){
+  mIp=ip;
+  if(hours)mHours=hours;
+  const m=document.getElementById('modal');
+  m.hidden=false;m.setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+  document.getElementById('mIp').textContent=ip;
+  document.getElementById('mSub').textContent='读取中…';
+  document.getElementById('mBody').innerHTML='<div class="empty">读取中…</div>';
+  document.getElementById('mFoot').innerHTML='';
+  fetch('/api/ip?ip='+encodeURIComponent(ip)+'&hours='+mHours,{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)throw new Error((j&&j.error)||'读取失败');
+      mData=j.data;renderIp(j.data);
+    })
+    .catch(e=>{
+      document.getElementById('mBody').innerHTML='';
+      document.getElementById('mBody').appendChild(el('div','empty',e.message));
+      document.getElementById('mSub').textContent='读不到档案';
+    });
+}
+
+/* 通用抽屉：IP 档案、异常来源、规则编辑器、nft 预览共用同一个 */
+function openSheet(title,sub){
+  mIp=null;mData=null;
+  const m=document.getElementById('modal');
+  m.hidden=false;m.setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+  document.getElementById('mIp').textContent=title;
+  const s=document.getElementById('mSub');
+  s.innerHTML='';
+  if(sub)s.textContent=sub;
+  const body=document.getElementById('mBody');
+  const foot=document.getElementById('mFoot');
+  body.innerHTML='';foot.innerHTML='';
+  return {body:body,foot:foot,sub:s,title:document.getElementById('mIp')};
+}
+
+/* 某类异常来自哪些 IP */
+function openAnomaly(kind){
+  const ui=openSheet('异常来源','读取中…');
+  ui.body.innerHTML='<div class="empty">读取中…</div>';
+  fetch('/api/anomaly?kind='+encodeURIComponent(kind)+'&range='+encodeURIComponent(curRange),
+        {credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)throw new Error((j&&j.error)||'读取失败');
+      if(j.data.banned)setBanMap(j.data.banned);
+      renderAnomalySheet(j.data);
+    })
+    .catch(e=>{
+      ui.body.innerHTML='';
+      ui.body.appendChild(el('div','empty',e.message));
+      ui.sub.textContent='读不到明细';
+    });
+}
+
+function renderAnomalySheet(d){
+  const ui=openSheet(d.label||d.kind,'');
+  ui.sub.appendChild(el('span',null,d.range_label+' · 共 '+fmt(d.n)+' 次'));
+  ui.sub.appendChild(badge(fmt(d.ip_count)+' 个来源','amber'));
+
+  const stats=el('div','m-stats');
+  [['命中次数',fmt(d.n)],['来源 IP',fmt(d.ip_count)],
+   ['最活跃',d.ips&&d.ips[0]?fmt(d.ips[0].n):'—'],
+   ['统计窗口',d.range_label]].forEach(([k,v])=>{
+    const s=el('div','m-stat');
+    s.appendChild(el('b',null,v));
+    s.appendChild(el('span',null,k));
+    stats.appendChild(s);
+  });
+  ui.body.appendChild(stats);
+
+  const sec=mSec('每个来源 IP','点 IP 看完整档案');
+  const t=el('table');
+  t.appendChild(row(['IP / 归属','次数','最后出现',''],'th',[0,3]));
+  (d.ips||[]).forEach(r=>{
+    const tr=el('tr');
+    const c=el('td');
+    const line=el('div');
+    line.appendChild(ipSpan(r.ip));
+    c.appendChild(line);
+    const gl=r.label||(r.geo&&r.geo.label)||'';
+    if(gl){
+      const g=el('div','geo');
+      g.appendChild(el('span','cc',flag(r.geo&&r.geo.cc)));
+      g.appendChild(document.createTextNode(gl));
+      c.appendChild(g);
+    }
+    tr.appendChild(c);
+    tr.appendChild(el('td','n',fmt(r.n)));
+    tr.appendChild(el('td','n',ts2str(r.last)));
+    const a=el('td');a.style.textAlign='right';
+    a.appendChild(banToggle(r.ip,{reason:'异常：'+(d.label||d.kind)}));
+    tr.appendChild(a);
+    t.appendChild(tr);
+  });
+  if(!(d.ips||[]).length){
+    const tr=el('tr');const td=el('td','empty','这个区间没有可归属的 IP');td.colSpan=4;
+    tr.appendChild(td);t.appendChild(tr);
+  }
+  sec.appendChild(t);
+  ui.body.appendChild(sec);
+
+  if((d.paths||[]).length){
+    const p=mSec('这些 IP 主要在探','点击复制');
+    const wrap=el('div','pathwrap');
+    d.paths.forEach(r=>{
+      const c=el('div','pathchip');
+      c.appendChild(el('span',null,r.path));
+      c.appendChild(el('b',null,fmt(r.n)));
+      c.title=r.path+' · '+r.n+' 次';
+      c.onclick=()=>copyPath(r.path);
+      wrap.appendChild(c);
+    });
+    p.appendChild(wrap);
+    ui.body.appendChild(p);
+  }
+
+  const close=el('button','btn','关闭');
+  close.onclick=closeModal;
+  ui.foot.appendChild(el('span','grow'));
+  ui.foot.appendChild(close);
+}
+
+function closeModal(){
+  const m=document.getElementById('modal');
+  m.hidden=true;m.setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+  mIp=null;mData=null;
+}
+
+document.querySelectorAll('[data-close]').forEach(x=>x.addEventListener('click',closeModal));
+document.addEventListener('keydown',ev=>{
+  if(ev.key==='Escape'&&!document.getElementById('modal').hidden){
+    closeModal();ev.preventDefault();
+  }
+});
+
+/* 全站委托：任何 .ip[data-ip] 都能点开 */
+document.addEventListener('click',ev=>{
+  const t=ev.target.closest('.ip[data-ip]');
+  if(!t)return;
+  ev.preventDefault();
+  openIp(t.dataset.ip);
+});
+
+function miniChart(points,box){
+  box.innerHTML='';
+  const W=520,H=64,n=(points||[]).length||1;
+  const max=Math.max(1,...points.map(p=>p.b+p.p));
+  const bw=W/n;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.setAttribute('preserveAspectRatio','none');
+  svg.setAttribute('class','m-chart');
+  (points||[]).forEach((p,i)=>{
+    const tot=p.b+p.p;if(!tot)return;
+    const h=tot/max*H;
+    const hb=p.b/max*H;
+    const mk=(y,hh,fill)=>{
+      const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x',(i*bw).toFixed(2));
+      r.setAttribute('width',Math.max(0.7,bw-0.6).toFixed(2));
+      r.setAttribute('y',(H-hh).toFixed(2));
+      r.setAttribute('height',hh.toFixed(2));
+      r.setAttribute('fill',fill);
+      svg.appendChild(r);
+    };
+    mk(H-h,h,'var(--blue)');
+    if(hb>0.3)mk(H-hb,hb,'var(--red)');
+  });
+  box.appendChild(svg);
+}
+
+function mSec(title,extra){
+  const w=el('div','m-sec');
+  const h=el('h4');
+  h.appendChild(document.createTextNode(title));
+  if(extra)h.appendChild(el('em',null,extra));
+  w.appendChild(h);
+  return w;
+}
+
+function renderIp(d){
+  const sub=document.getElementById('mSub');
+  sub.innerHTML='';
+  if(d.geo_label){sub.appendChild(el('span',null,flag(d.geo&&d.geo.cc)+' '+d.geo_label));}
+  else sub.appendChild(el('span',null,d.private?'内网地址':'归属地未知'));
+  if(d.own)sub.appendChild(badge('我的 IP','blue'));
+  if(d.whitelisted)sub.appendChild(badge('白名单','green'));
+  if(d.ban.active){
+    const layers=[];
+    if(d.ban.nft)layers.push('nft');
+    if(d.ban.nginx)layers.push('nginx');
+    if(d.ban.cf)layers.push('CF');
+    sub.appendChild(badge('已封禁 · '+layers.join('+'),'red'));
+  }else{
+    sub.appendChild(badge('未封禁',''));
+  }
+
+  const body=document.getElementById('mBody');
+  body.innerHTML='';
+
+  /* 时间窗 */
+  const wbar=el('div');wbar.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px';
+  wbar.appendChild(el('span','ch-note','统计窗口'));
+  wbar.appendChild(segControl(
+    [['1','1 小时'],['6','6 小时'],['24','24 小时'],['168','7 天'],['720','30 天']],
+    String(d.window.hours),(v)=>{openIp(d.ip,+v);},'sm'));
+  body.appendChild(wbar);
+
+  /* 指标 */
+  const stats=el('div','m-stats');
+  [['窗口请求',fmt(d.sum.w_total)],
+   ['其中拦截',fmt(d.sum.w_blocked)],
+   ['访问路径',fmt(d.sum.w_paths)],
+   ['SSH 失败',fmt(d.sum.ssh)]
+  ].forEach(([k,v])=>{
+    const s=el('div','m-stat');
+    s.appendChild(el('b',null,v));
+    s.appendChild(el('span',null,k));
+    stats.appendChild(s);
+  });
+  body.appendChild(stats);
+
+  /* 曲线 */
+  const ch=el('div');
+  miniChart(d.points||[],ch);
+  body.appendChild(ch);
+  const range=el('div','ch-x');
+  range.style.marginTop='2px';
+  const pts=d.points||[];
+  if(pts.length){
+    const p2=s=>String(s).padStart(2,'0');
+    [0,Math.floor(pts.length/2),pts.length-1].forEach((i,k)=>{
+      if(k===2&&i===0)return;
+      const t=new Date(pts[i].t*1000);
+      range.appendChild(el('span',null,p2(t.getHours())+':'+p2(t.getMinutes())));
+    });
+  }
+  body.appendChild(range);
+
+  /* 全量信息 */
+  const info=mSec('总体');
+  const kv=el('div','kv2');
+  const add=(a,b)=>{kv.appendChild(el('span',null,a));kv.appendChild(el('b',null,b));};
+  add('累计请求',fmt(d.sum.total)+'（拦截 '+fmt(d.sum.blocked)+'）');
+  add('首次出现',d.first_str||'—');
+  add('最近一次',d.last_str||'—');
+  if(d.sum.ssh_all)add('SSH 失败累计',d.sum.ssh_all+' 次');
+  if(d.ban.reason)add('封禁原因',d.ban.reason);
+  if(d.ban.until)add('封禁到期',ts2str(d.ban.until));
+  if(d.bans&&d.bans.length)add('历史封禁',d.bans.length+' 次');
+  info.appendChild(kv);
+  body.appendChild(info);
+
+  /* 路径 */
+  if((d.paths||[]).length){
+    const sec=mSec('访问路径',d.paths.length+' 条');
+    const t=el('table');
+    t.appendChild(row(['路径','次数','状态','大小'],'th',[0]));
+    d.paths.slice(0,10).forEach(p=>{
+      const tr=el('tr');
+      const c=el('td','p');c.textContent=p.path;c.title=p.path;tr.appendChild(c);
+      tr.appendChild(el('td','n',fmt(p.n)));
+      const cs=el('td','n',String(p.status));
+      cs.style.color=(p.status>=400)?'var(--red)':'';
+      tr.appendChild(cs);
+      tr.appendChild(el('td','n',p.sz?(p.sz/1024).toFixed(1)+'K':'—'));
+      t.appendChild(tr);
+    });
+    sec.appendChild(t);
+    body.appendChild(sec);
+  }
+
+  /* 状态码 + 异常 */
+  if((d.status||[]).length||(d.anomaly||[]).length){
+    const sec=mSec('响应与异常');
+    const wrap=el('div');wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
+    (d.status||[]).forEach(s=>{
+      const kind=s.code>=400?'red':s.code>=300?'amber':'green';
+      wrap.appendChild(badge(s.code+' · '+fmt(s.n),kind));
+    });
+    (d.anomaly||[]).forEach(a=>{
+      wrap.appendChild(badge(a.label+' · '+fmt(a.n),'amber'));
+    });
+    sec.appendChild(wrap);
+    body.appendChild(sec);
+  }
+
+  /* UA */
+  if((d.agents||[]).length){
+    const sec=mSec('User-Agent');
+    d.agents.forEach(a=>{
+      const line=el('div');
+      line.style.cssText='display:flex;gap:8px;align-items:baseline;padding:3px 0';
+      const u=el('div','ua',a.ua);u.title=a.ua;u.style.flex='1';
+      line.appendChild(u);
+      line.appendChild(el('span','ch-note',fmt(a.n)));
+      sec.appendChild(line);
+    });
+    body.appendChild(sec);
+  }
+
+  /* 敏感路径 */
+  if((d.sensitive||[]).length){
+    const sec=mSec('敏感路径','红色 = 真的读到了内容');
+    d.sensitive.forEach(s=>{
+      const line=el('div');
+      line.style.cssText='display:flex;gap:8px;align-items:center;padding:3px 0;font-size:12px';
+      line.appendChild(el('span','mono',s.path));
+      line.appendChild(badge(String(s.status),s.real?'red':''));
+      line.appendChild(el('span','ch-note',(s.sz/1024).toFixed(1)+' KB'));
+      sec.appendChild(line);
+    });
+    body.appendChild(sec);
+  }
+
+  /* 封禁记录 */
+  if((d.bans||[]).length){
+    const sec=mSec('封禁流水');
+    d.bans.forEach(b=>{
+      const line=el('div','kv');
+      line.appendChild(el('span',null,ts2str(b.ts)+' · '+(b.mode==='auto'?'自动':b.mode==='dry'?'演练':'手动')));
+      line.appendChild(el('b',null,(b.hours?b.hours+' 小时':'永久')+(b.reason?' · '+b.reason:'')));
+      sec.appendChild(line);
+    });
+    body.appendChild(sec);
+  }
+
+  buildIpFoot(d);
+}
+
+function buildIpFoot(d){
+  const f=document.getElementById('mFoot');
+  f.innerHTML='';
+  if(d.ban.active){
+    const un=el('button','btn primary','解封 '+d.ip);
+    un.onclick=()=>{
+      un.disabled=true;
+      api('ip.unblock',{ip:d.ip})
+        .then(r=>{toast(r.result.msg);openIp(d.ip);renderAdminRefresh();loadRange();})
+        .catch(e=>{toast(e.message,true);un.disabled=false;});
+    };
+    f.appendChild(un);
+  }else{
+    f.appendChild(segControl(
+      [['1','1 小时'],['24','24 小时'],['168','7 天'],['0','永久']],
+      String(mBanHours),(v)=>{mBanHours=+v;buildIpFoot(d);},'sm'));
+    const bb=el('button','btn danger','封禁');
+    bb.onclick=()=>{
+      if(!confirm('封禁 '+d.ip+' '+ipHoursText(mBanHours)+'？\n\n会对 nginx 和 nftables 同时下发'+
+        '（配了 Cloudflare 再推一条边缘规则）。'))return;
+      bb.disabled=true;
+      api('ip.block',{ip:d.ip,hours:mBanHours,layer:'both',reason:'面板手动封禁'})
+        .then(r=>{toast(r.result.msg);openIp(d.ip);renderAdminRefresh();loadRange();})
+        .catch(e=>{toast(e.message,true);bb.disabled=false;});
+    };
+    f.appendChild(bb);
+  }
+
+  const wl=el('button','btn',d.whitelisted?'移出白名单':'加入白名单');
+  wl.onclick=()=>{
+    wl.disabled=true;
+    api('policy.whitelist',{op:d.whitelisted?'remove':'add',ip:d.ip})
+      .then(r=>{toast(r.result.msg);openIp(d.ip);if(polLoaded)loadPolicy();})
+      .catch(e=>{toast(e.message,true);wl.disabled=false;});
+  };
+  f.appendChild(wl);
+
+  const grow=el('div','grow');
+  f.appendChild(grow);
+  const cl=el('button','btn','关闭');
+  cl.onclick=closeModal;
+  f.appendChild(cl);
+}
+
+/* ============ 管理 ============ */
+/* 面板密码一改，浏览器里的旧凭据立刻失效；把后续调用挡在本地，
+   免得满屏 401 报错，只留一条"重新登录"的提示。 */
+let PANEL_STALE=false;
+
+function api(action,params){
+  if(PANEL_STALE)return Promise.reject(new Error('面板密码已更新，请重新打开页面'));
+  return fetch('/api/action',{
+    method:'POST',
+    credentials:'same-origin',
+    headers:{'Content-Type':'application/json','X-Requested-With':'HomeWatch'},
+    body:JSON.stringify({action,params:params||{}})
+  }).then(async r=>{
+    let d={};
+    try{d=await r.json();}catch(e){}
+    if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));
+    return d;
+  });
+}
+
+function loadAdmin(){
+  const box=document.getElementById('adm-ports');
+  box.innerHTML='';
+  box.appendChild(row(['端口','名称','监听','防火墙',''],'th'));
+  const tr=el('tr');const td=el('td','empty','读取中…');td.colSpan=5;tr.appendChild(td);box.appendChild(tr);
+
+  fetch('/api/state',{credentials:'same-origin'})
+    .then(async r=>{
+      if(r.status===401)throw new Error('需要登录：刷新页面后输入管理员密码');
+      const d=await r.json();
+      if(!d.ok)throw new Error(d.error||'读取失败');
+      renderAdmin(d.data);
+    })
+    .catch(e=>{
+      box.innerHTML='';
+      const tr=el('tr');const td=el('td','empty',e.message);td.colSpan=5;tr.appendChild(td);box.appendChild(tr);
+      toast(e.message,true);
+    });
+}
+
+function renderAuth(a){
+  const box=document.getElementById('adm-auth');box.innerHTML='';
+  if(!a){box.appendChild(el('div','empty','暂无数据'));return;}
+  const table=el('table');
+  const add=(k,v)=>{
+    const tr=el('tr');
+    const c1=el('td',null,k);c1.style.cssText='color:var(--dim);width:96px';
+    const c2=el('td',v?'mono':null,v||'—');
+    tr.appendChild(c1);tr.appendChild(c2);table.appendChild(tr);
+  };
+  add('用户名',a.user||'admin');
+  add('密码文件',a.exists?a.path:'（不存在）');
+  add('上次修改',a.mtime?ts2str(a.mtime)+'（'+a.age_days+' 天前）':'—');
+  if(a.exists&&a.mode)add('文件权限',a.mode);
+  box.appendChild(table);
+  (a.warnings||[]).forEach(w=>{
+    const d=el('div','hint',w);d.style.color='var(--amber)';box.appendChild(d);
+  });
+  if(a.age_days!==null&&a.age_days!==undefined&&a.age_days>180){
+    const d=el('div','hint','面板密码已经 '+a.age_days+' 天没换，建议顺手改一个');
+    d.style.color='var(--amber)';box.appendChild(d);
+  }
+}
+
+/* ---------- 小控件 ---------- */
+function segControl(options,cur,onPick,size,disabled){
+  const w=el('div','seg'+(size?' '+size:''));
+  options.forEach(opt=>{
+    const v=opt[0],label=opt[1],kind=opt[2];
+    const b=el('button',(v===cur?'on':'')+((kind&&v===cur)?' '+kind:''));
+    b.type='button';b.textContent=label;b.dataset.v=v;
+    if(opt[3])b.title=opt[3];
+    if(disabled){b.disabled=true;w.title='该端口只读';}
+    else b.onclick=()=>{
+      if(v===cur)return;
+      cur=v;
+      /* 选中态由控件自己维护：编辑规则这类场景不会整块重绘 */
+      w.querySelectorAll('button').forEach(x=>{
+        x.classList.toggle('on',x.dataset.v===v);
+        if(x===b&&kind)x.classList.add(kind);
+      });
+      onPick(v,b,w);
+    };
+    w.appendChild(b);
+  });
+  return w;
+}
+
+function tile(label,value,sub,kind){
+  const w=el('div','tile'+(kind?' '+kind:''));
+  w.appendChild(el('div','t-l',label));
+  const v=el('div','t-v');
+  v.appendChild(document.createTextNode(value));
+  w.appendChild(v);
+  w.appendChild(el('div','t-s',sub||''));
+  return w;
+}
+
+/* ---------- 管理页顶部：把结论先说清 ---------- */
+function renderStrip(st){
+  const box=document.getElementById('admStrip');if(!box)return;
+  box.innerHTML='';
+  const units=(st.units&&st.units.units)||[];
+  /* oneshot（采集任务）跑完就退出，"inactive" 才是正常状态；
+     它是否健康看上一轮 Result，不然每次刷新都报一条假警。 */
+  const dead=u=>u.kind==='oneshot'
+    ? !!(u.result&&u.result!=='success')
+    : u.active!=='active';
+  const running=units.filter(u=>!dead(u)).length;
+  const bad=units.filter(u=>!u.readonly&&dead(u));
+  const ports=st.ports||[];
+  const blocked=(st.blocked_nginx||[]).length||((st.blocked_nft||[]).length);
+  const cf=(st.cf&&st.cf.api)||{};
+  const guard=st.units&&st.units.guard||{};
+  const fw=st.fw||{},fwRules=fw.rules||[],pol=fw.policy||{in:'accept'};
+  const hits=fwRules.reduce((a,r)=>a+(r.hits||0),0);
+  const geo=st.geo_lock||{};
+  const geoOn=!!(geo.in&&geo.in.enabled);
+
+  box.appendChild(tile('服务',running+' / '+units.length,
+    bad.length?('异常：'+bad.map(u=>u.label).join('、')):'全部正常',
+    bad.length?'bad':'ok'));
+  box.appendChild(tile('端口',String(ports.length),
+    ports.filter(p=>p.listening).length+' 个在监听 · '+
+    ports.filter(p=>p.ctrl&&p.ctrl.in==='deny').length+' 个禁入',
+    ''));
+  box.appendChild(tile('防火墙',fwRules.filter(r=>r.enabled).length+' 条',
+    '默认'+(pol.in==='drop'?'拒绝':'放行')+' · 命中 '+fmt(hits)+
+    (geoOn?' · 境外拦截开':''),
+    pol.in==='drop'?'ok':''));
+  box.appendChild(tile('封禁',fmt(blocked),
+    (st.policy&&st.policy.ban_mode_label)||'444 静默',''));
+
+  /* 守护：开关就放在这个块里，不用再点进「服务」找 */
+  const gt=tile('守护',guard.on?'开':'关',
+    guard.on?'崩溃 3 秒内自动拉起':'崩溃后不会自动拉起',
+    guard.on?'ok':'warn');
+  const sw=el('button','tgl'+(guard.on?' on':''));
+  sw.type='button';sw.classList.add('t-sw');
+  sw.title=guard.on?'进程守护已开启，点击关闭':'进程守护已关闭，点击开启';
+  sw.onclick=(ev)=>{
+    ev.stopPropagation();
+    sw.disabled=true;
+    api('svc.guard',{enabled:!guard.on})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);sw.disabled=false;});
+  };
+  gt.appendChild(sw);
+  box.appendChild(gt);
+
+  box.appendChild(tile('Cloudflare',cf.enabled?'已启用':'未启用',
+    (cf.zone||'未配置')+(cf.auto_sync?' · 自动同步':''),
+    cf.enabled?'ok':''));
+}
+
+/* ---------- 端口与出入站 ---------- */
+const IN_OPTS=[
+  ['allow','放行','','全部放行：公网和内网都能连'],
+  ['lan','内网','','仅内网：只允许 lan_cidrs 里的地址'],
+  ['cf','CF','','仅 Cloudflare：只允许 CF 回源网段'],
+  ['deny','禁止','bad','禁止：该端口的包全部丢弃']];
+const OUT_OPTS=[
+  ['allow','放行','','全部放行：出站不限'],
+  ['lan','内网','','仅内网：只能发往内网地址'],
+  ['deny','禁止','bad','禁止：出站到这个端口的包全部丢弃']];
+
+function renderPorts(st){
+  const box=document.getElementById('adm-ports');if(!box)return;
+  box.innerHTML='';
+  box.appendChild(row(['端口','名称','入站','出站'],'th',[0,1]));
+  (st.ports||[]).forEach(p=>{
+    const tr=el('tr');
+    tr.appendChild(el('td','mono',String(p.port)));
+
+    const c2=el('td','c');
+    const head=el('div');
+    head.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    head.appendChild(el('b',null,p.label));
+    const proto=p.ctrl&&p.ctrl.proto||'tcp';
+    const pTag=el('button','tag',proto==='both'?'TCP+UDP':proto.toUpperCase());
+    pTag.type='button';
+    pTag.style.cssText='cursor:pointer;font-family:ui-monospace,monospace;font-size:10px';
+    if(p.readonly){
+      pTag.disabled=true;
+      pTag.title='协议';
+    }else{
+      pTag.title='协议：点一下切换 TCP → UDP → TCP+UDP';
+      pTag.onclick=()=>{
+        const order=['tcp','udp','both'];
+        const next=order[(order.indexOf(proto)+1)%3];
+        pTag.disabled=true;
+        api('port.ctrl',{port:p.port,direction:'in',mode:(p.ctrl&&p.ctrl.in)||'allow',proto:next})
+          .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);pTag.disabled=false;});
+      };
+    }
+    head.appendChild(pTag);
+    c2.appendChild(head);
+    const st2=el('div');
+    st2.style.cssText='display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap';
+    st2.appendChild(el('span','pill'+(p.listening?' ok':''),p.listening?'监听中':'未监听'));
+    if(p.desc)st2.appendChild(el('span','tag',p.desc));
+    c2.appendChild(st2);
+    tr.appendChild(c2);
+
+    const cin=el('td','c');
+    if(p.readonly){
+      cin.appendChild(segControl(IN_OPTS,(p.ctrl&&p.ctrl.in)||'allow',null,'sm',true));
+    }else{
+      cin.appendChild(segControl(IN_OPTS,(p.ctrl&&p.ctrl.in)||'allow',(v,b,w)=>{
+        if(v==='deny'&&!confirm('把 '+p.label+'（'+p.port+'）的入站设为「禁止」？\n\n该端口的连接会被全部丢弃，不是停服务。'+
+          (p.port===22?'\n\n⚠ 这是 SSH 端口，关掉后只能从 PVE Console 恢复。':'')))return;
+        w.querySelectorAll('button').forEach(x=>x.disabled=true);
+        api('port.ctrl',{port:p.port,direction:'in',mode:v})
+          .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);renderAdmin(st);});
+      },'sm'));
+    }
+    tr.appendChild(cin);
+
+    const cout=el('td','c');
+    if(p.readonly){
+      cout.appendChild(segControl(OUT_OPTS,(p.ctrl&&p.ctrl.out)||'allow',null,'sm',true));
+    }else{
+      cout.appendChild(segControl(OUT_OPTS,(p.ctrl&&p.ctrl.out)||'allow',(v,b,w)=>{
+        if(v==='deny'&&!confirm('禁止本机出站到 '+p.port+' 端口？\n\n本机访问这个目标端口的流量会被丢弃。'))return;
+        w.querySelectorAll('button').forEach(x=>x.disabled=true);
+        api('port.ctrl',{port:p.port,direction:'out',mode:v})
+          .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);renderAdmin(st);});
+      },'sm'));
+    }
+    tr.appendChild(cout);
+    box.appendChild(tr);
+  });
+
+  const sum=document.getElementById('portSum');
+  if(sum){
+    sum.innerHTML='';
+    const cnt={allow:0,lan:0,cf:0,deny:0};
+    (st.ports||[]).forEach(p=>{cnt[(p.ctrl&&p.ctrl.in)||'allow']++;});
+    const total=(st.ports||[]).length||1;
+    [['放行',cnt.allow,'var(--green)'],
+     ['仅内网',cnt.lan,'var(--blue)'],
+     ['仅 Cloudflare',cnt.cf,'#f38020'],
+     ['禁止入站',cnt.deny,'var(--red)']].forEach(([k,v,c])=>{
+      const line=el('div','kv');
+      const left=el('span');left.style.cssText='display:flex;align-items:center;gap:7px';
+      const dot=el('i');dot.style.cssText='width:7px;height:7px;border-radius:50%;background:'+c;
+      left.appendChild(dot);left.appendChild(document.createTextNode(k));
+      line.appendChild(left);
+      line.appendChild(el('b',null,v+' 个'));
+      sum.appendChild(line);
+    });
+    const last=el('div','hint','监听中 '+(st.ports||[]).filter(p=>p.listening).length+
+      ' 个 · 共 '+total+' 个受管端口');
+    sum.appendChild(last);
+  }
+
+  const lg=document.getElementById('portLegend');
+  if(lg){
+    lg.innerHTML='';
+    [['allow','全部放行','公网和内网都能连，最宽松'],
+     ['lan','仅内网','只允许 lan_cidrs 里的地址，SSH 和面板走这个'],
+     ['cf','仅 Cloudflare','只允许 CF 回源网段，源站 8443 走这个'],
+     ['deny','禁止','该端口的包直接丢弃，计数器能看到丢了多少']
+    ].forEach(([k,t,d])=>{
+      const line=el('div');
+      line.style.cssText='display:flex;align-items:baseline;gap:8px;padding:7px 0;'+
+        'border-top:1px solid var(--line)';
+      line.appendChild(dirIcon(k));
+      const d2=el('span',null,d);
+      d2.style.cssText='color:var(--dim);font-size:11.5px;line-height:1.5';
+      line.appendChild(d2);
+      lg.appendChild(line);
+    });
+    lg.firstChild.style.borderTop='0';
+  }
+}
+
+/* ---------- 进程守护 ---------- */
+function svcStateText(u){
+  if(u.active==='active')return u.kind==='timer'?'等待下次触发':'运行中';
+  if(u.active==='activating')return '启动中';
+  if(u.active==='failed')return '启动失败';
+  if(u.active==='inactive'){
+    /* oneshot 跑完就退出，显示"上一轮成功"比"已停止"准确 */
+    if(u.kind==='oneshot'){
+      if(u.result&&u.result!=='success')return '上一轮失败';
+      return '空闲（按分钟触发）';
+    }
+    return u.sub==='dead'?'已停止':'未运行';
+  }
+  return u.active||'未知';
+}
+
+function renderUnits(st){
+  const box=document.getElementById('adm-units');if(!box)return;
+  const u=st.units||{};
+  const list=u.units||[];
+  box.innerHTML='';
+  if(!list.length){
+    box.appendChild(el('div','empty','读不到 systemd 状态（可能不是 systemd 系统）'));
+    return;
+  }
+  list.forEach(x=>{
+    const row2=el('div','srow');
+    const t=el('div','s-t');
+    const b=el('b');
+    b.appendChild(document.createTextNode(x.label));
+    b.appendChild(el('span','pill '+(x.active==='active'?'ok':'off'),svcStateText(x)));
+    if(x.readonly)b.appendChild(el('span','tag','只读'));
+    t.appendChild(b);
+    const sub=[x.name,x.desc];
+    t.appendChild(el('div','s-t',sub.join(' · ')));
+    row2.appendChild(t);
+
+    const meta=el('div');meta.style.cssText='text-align:right;font-size:11.5px;color:var(--dim);line-height:1.5';
+    meta.appendChild(el('div',null,'重启 '+x.restarts+' 次'+(x.memory?' · '+x.memory:'')));
+    if(x.kind==='timer'&&x.next)meta.appendChild(el('div',null,'下次 '+ts2str(x.next)));
+    if(x.since)meta.appendChild(el('div',null,'自 '+ts2str(x.since)));
+    row2.appendChild(meta);
+
+    const act=el('div');act.style.cssText='display:flex;gap:6px;justify-content:flex-end';
+    if(x.readonly){
+      act.appendChild(el('span','ch-note','—'));
+    }else{
+      const wrapT=el('div');
+      wrapT.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+      wrapT.appendChild(el('span','ch-note','自启')).style.fontSize='10px';
+      const tgl=el('button','tgl'+(x.enabled?' on':''));
+      tgl.type='button';tgl.title=x.enabled?'开机自启：开（点击关闭）':'开机自启：关（点击打开）';
+      tgl.onclick=()=>{
+        tgl.disabled=true;
+        api('svc.set',{unit:x.name,action:x.enabled?'disable':'enable'})
+          .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);tgl.disabled=false;});
+      };
+      wrapT.appendChild(tgl);
+      act.appendChild(wrapT);
+
+      const oneshot=x.kind==='oneshot';
+      const run=el('button','btn',oneshot?'立即运行':'重启');
+      run.onclick=()=>{
+        if(!oneshot&&!confirm('重启 '+x.label+'？'))return;
+        run.disabled=true;
+        api('svc.set',{unit:x.name,action:'restart'})
+          .then(d=>{toast(d.result.msg);
+            if(oneshot)setTimeout(()=>renderAdminRefresh(),1200);else renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);run.disabled=false;});
+      };
+      act.appendChild(run);
+
+      /* oneshot 跑完就退出，没有"停止"这回事，按钮只留"立即运行" */
+      if(oneshot){row2.appendChild(act);box.appendChild(row2);return;}
+
+      const on=x.active==='active';
+      const pb=el('button','btn'+(on?' danger':' primary'),on?'停止':'启动');
+      pb.onclick=()=>{
+        if(on&&!confirm('停止 '+x.label+'？\n\n'+x.desc))return;
+        pb.disabled=true;
+        api('svc.set',{unit:x.name,action:on?'stop':'start'})
+          .then(d=>{toast(d.result.msg);setTimeout(()=>renderAdminRefresh(),800);})
+          .catch(e=>{toast(e.message,true);pb.disabled=false;});
+      };
+      act.appendChild(pb);
+    }
+    row2.appendChild(act);
+    box.appendChild(row2);
+  });
+
+  const note=document.getElementById('svcNote');
+  if(note)note.textContent='最后采集 '+(u.last_collect?ts2str(u.last_collect):'—')+
+    (u.lag?'（'+Math.max(0,Math.round(u.lag/60))+' 分钟前）':'');
+
+  const wn=document.getElementById('svcWarn');if(wn){
+    wn.innerHTML='';
+    (u.warnings||[]).forEach(w=>{
+      const d=el('div','hint','⚠ '+w);d.style.color='var(--amber)';wn.appendChild(d);
+    });
+  }
+}
+
+function renderGuard(st){
+  const box=document.getElementById('adm-guard');if(!box)return;
+  const u=st.units||{},g=u.guard||{};
+  box.innerHTML='';
+
+  const row2=el('div','srow');
+  const t=el('div','s-t');
+  const b=el('b');
+  b.appendChild(document.createTextNode('崩溃自动拉起'));
+  b.appendChild(el('span','pill '+(g.on?'ok':'off'),g.on?'已开启':'已关闭'));
+  t.appendChild(b);
+  t.appendChild(el('div','s-t',
+    'systemd Restart='+(g.restart||'默认')+' · 只作用于管理接口这个常驻进程'));
+  row2.appendChild(t);
+  row2.appendChild(el('span'));
+
+  const tgl=el('button','tgl'+(g.on?' on':''));
+  tgl.type='button';
+  tgl.title=g.on?'点击关闭进程守护':'点击开启进程守护';
+  tgl.style.width='42px';tgl.style.height='24px';
+  tgl.onclick=()=>{
+    tgl.disabled=true;
+    api('svc.guard',{enabled:!g.on})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);tgl.disabled=false;});
+  };
+  row2.appendChild(tgl);
+  box.appendChild(row2);
+
+  const kv=el('div','kv2');
+  kv.appendChild(el('span',null,'生效方式'));
+  kv.appendChild(el('b',null,g.on?'崩溃后 3 秒内拉起':'手动重启 / 系统自启'));
+  kv.appendChild(el('span',null,'配置文件'));
+  const f=el('b',null,g.file||'—');
+  /* 路径太长，宁可折两行也别只剩「…/10-homewatch-g…」，看不出是 drop-in 还是 unit */
+  f.style.fontSize='11px';f.title=g.file||'';
+  f.style.whiteSpace='normal';f.style.wordBreak='break-all';f.style.lineHeight='1.45';
+  kv.appendChild(f);
+  box.appendChild(kv);
+
+  const b2=el('button','btn','一键修复（补齐自启并拉起）');
+  b2.style.marginTop='10px';
+  b2.onclick=()=>{
+    b2.disabled=true;
+    api('svc.heal',{})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);b2.disabled=false;});
+  };
+  box.appendChild(b2);
+  box.appendChild(el('div','hint',
+    '守护只管「崩了拉起来」，不管「现在跑不跑」；每个服务自己的开关在左边列表里。'+
+    '开关写的是 systemd drop-in，立即生效，不需要重启服务。'));
+}
+
+function renderHealth(st){
+  const box=document.getElementById('adm-health');if(!box)return;
+  const u=st.units||{};
+  box.innerHTML='';
+  const lag=u.lag||0;
+  const k=el('div','kv2');
+  const add=(a,b)=>{
+    k.appendChild(el('span',null,a));
+    k.appendChild(el('b',null,b));
+  };
+  add('最后采集',u.last_collect?ts2str(u.last_collect):'—');
+  add('距今',lag?Math.round(lag/60)+' 分钟':'—');
+  const timer=(u.units||[]).find(x=>x.kind==='timer');
+  add('定时器',timer?svcStateText(timer):'—');
+  const lagOk=lag&&lag<180;
+  const d=el('div','hint',
+    lagOk?'采集正常，每分钟一轮。':'采集可能停了，点上面的「一键修复」，或到「服务」里启动定时器。');
+  d.style.color=lagOk?'var(--dim)':'var(--amber)';
+  box.appendChild(k);
+  box.appendChild(d);
+}
+
+/* ---------- 封禁 ---------- */
+function renderBlocked(st){
+  const map=new Map();
+  (st.blocked_nft||[]).forEach(x=>map.set(x.ip,{
+    ip:x.ip,nft:true,until:x.until,reason:x.reason,geo:x.geo,cc:x.cc,auto:x.auto}));
+  (st.blocked_nginx||[]).forEach(ip=>{
+    const e=map.get(ip)||{ip};
+    e.nginx=true;map.set(ip,e);
+  });
+
+  const bt=document.getElementById('adm-blocked');bt.innerHTML='';
+  bt.appendChild(row(['IP','层','到期',''],'th',[0]));
+  if(!map.size){
+    const tr=el('tr');const td=el('td','empty','当前没有封禁任何 IP');td.colSpan=4;
+    tr.appendChild(td);bt.appendChild(tr);
+  }
+  map.forEach(e=>{
+    const tr=el('tr');
+    const c=el('td');
+    const ipLine=el('div');
+    ipLine.appendChild(ipSpan(e.ip,{cls:'banned',tag:false}));
+    if(e.auto)ipLine.appendChild(el('span','tag','自动'));
+    c.appendChild(ipLine);
+    if(e.geo)c.appendChild(el('div','geo',flag(e.cc)+' '+e.geo));
+    else if(e.reason)c.appendChild(el('div','geo',e.reason));
+    tr.appendChild(c);
+    const layers=[];
+    if(e.nft)layers.push('nft');
+    if(e.nginx)layers.push('nginx');
+    tr.appendChild(el('td',null,layers.join(' + ')||'—'));
+    tr.appendChild(el('td',null,e.nft?ts2str(e.until):'—'));
+    const act=el('td');act.style.textAlign='right';
+    const b=el('button','btn','解封');
+    b.onclick=()=>{
+      b.disabled=true;
+      api('ip.unblock',{ip:e.ip})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(err=>{toast(err.message,true);b.disabled=false;});
+    };
+    act.appendChild(b);tr.appendChild(act);
+    bt.appendChild(tr);
+  });
+  const n=document.getElementById('banNote');
+  if(n)n.textContent=map.size+' 个在封 · 点 IP 看档案';
+}
+
+function renderBanMode(st){
+  const bm=document.getElementById('banMode');if(!bm)return;
+  bm.value=st.policy.ban_mode||'silent';
+  const wire=st.policy.wiring||{};
+  const bh=document.getElementById('banModeHint');
+  if(wire.mode&&wire.mode!=='visible'&&(!wire.wired||(st.policy.silent_log===false&&!wire.log_wired))){
+    bh.textContent='⚠ '+((wire.warnings&&wire.warnings[0])||'站点还没按当前模式接线')
+      +'。点「应用」会自动改站点里的 return 和 access_log（改完 nginx -t 校验，失败自动还原）。';
+    bh.style.color='var(--amber)';
+  }else{
+    bh.textContent='当前：'+(st.policy.ban_mode_label||'—')+
+      '（'+(st.policy.silent_log?'写日志':'不写日志')+'）'+
+      '。444 不回任何字节直接断开，扫描器只能看到超时。';
+    bh.style.color='';
+  }
+}
+
+/* ---------- SSH 通道 ---------- */
+function renderSsh(st){
+  const s=document.getElementById('adm-ssh');if(!s)return;
+  s.innerHTML='';
+  const on=st.ssh.socket_active;
+  const sport=st.ssh.port||22;
+
+  const line=el('div','row');line.style.marginBottom='10px';
+  line.appendChild(el('span','pill'+(on?' ok':' off'),on?'已开启':'已关闭'));
+  line.appendChild(el('span','hint',on?('监听 '+sport+' 端口，仅内网可达'):'没有监听，SSH 无法连接'));
+  s.appendChild(line);
+  const note=document.getElementById('sshNote');
+  if(note)note.textContent=on?'当前监听 '+sport:'已关闭';
+
+  const pend=st.ssh.pending;
+  if(pend&&pend.left>0){
+    const box=el('div');
+    box.style.cssText='background:var(--amberbg);border:1px solid var(--amber);'+
+      'border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px';
+    box.appendChild(el('div',null,'端口已改为 '+pend.new+'，请在 '+mmss(pend.left)+
+      ' 内用新端口登录确认，否则自动回滚到 '+pend.old));
+    const r=el('div','row');r.style.marginTop='8px';
+    const keep=el('button','btn primary','我已连上，保留 '+pend.new);
+    keep.onclick=()=>{
+      keep.disabled=true;
+      api('ssh.port.confirm',{})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);keep.disabled=false;});
+    };
+    const back=el('button','btn','回滚到 '+pend.old);
+    back.onclick=()=>{
+      if(!confirm('立刻改回 '+pend.old+' 端口？'))return;
+      back.disabled=true;
+      api('ssh.port.rollback',{})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);back.disabled=false;});
+    };
+    r.appendChild(keep);r.appendChild(back);box.appendChild(r);
+    s.appendChild(box);
+  }
+
+  const btn=el('button','btn'+(on?' danger':' primary'),on?'关闭 SSH':'开启 SSH');
+  btn.onclick=()=>{
+    const msg=on
+      ? '确定关闭 SSH？\n\n关闭后本机不再监听 SSH，只能通过本面板或 PVE Console 重新开启。'
+      : '确定开启 SSH？\n\n开启后仍只允许内网访问，公网进不来。';
+    if(!confirm(msg))return;
+    btn.disabled=true;
+    api('ssh.set',{enabled:!on})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);btn.disabled=false;});
+  };
+  s.appendChild(btn);
+
+  const pb=el('div');pb.style.marginTop='14px';
+  pb.appendChild(el('div',null,'当前端口 '+sport)).style.cssText='font-size:12.5px;margin-bottom:6px';
+  const prow=el('div','row');
+  const pin=el('input');pin.type='number';pin.min='1024';pin.max='65535';
+  pin.placeholder='新端口，如 2222';pin.style.maxWidth='132px';
+  const pbtn=el('button','btn','更换端口');
+  const doPort=()=>{
+    const val=parseInt(pin.value,10);
+    if(!val||val<1024||val>65535){toast('端口需在 1024–65535 之间',true);return;}
+    if(val===sport){toast('和当前端口一样',true);return;}
+    if(!confirm('SSH 端口从 '+sport+' 改为 '+val+'？\n\n'+
+      '会同时修改 ssh.socket、sshd_config 和防火墙放行规则。\n'+
+      '改完请立刻用新端口登录验证，15 分钟内不确认会自动改回 '+sport+'。'))return;
+    pbtn.disabled=true;
+    api('ssh.port',{port:val})
+      .then(d=>{toast(d.result.msg);pin.value='';renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);pbtn.disabled=false;});
+  };
+  pbtn.onclick=doPort;
+  pin.onkeydown=e=>{if(e.key==='Enter')doPort();};
+  prow.appendChild(pin);prow.appendChild(pbtn);pb.appendChild(prow);
+  pb.appendChild(el('div','hint','改的是 SSH 监听端口，不是防火墙开关。端口改完会有一段未确认状态，超时自动回滚，避免把自己锁在门外。'));
+  s.appendChild(pb);
+
+  if(st.ssh.password_age!==null&&st.ssh.password_age!==undefined){
+    s.appendChild(el('div','hint','root 密码已使用 '+st.ssh.password_age+' 天'));
+  }
+}
+
+/* ---------- 审计 ---------- */
+function renderAudit(st){
+  const au=document.getElementById('adm-audit');if(!au)return;
+  au.innerHTML='';
+  if(!st.audit||!st.audit.length){au.appendChild(el('div','empty','还没有操作记录'));return;}
+  const t=el('table');
+  t.appendChild(row(['时间','操作','参数','结果'],'th',[1,2,3]));
+  st.audit.forEach(a=>{
+    const tr=el('tr');
+    tr.appendChild(el('td','mono',(a.at||'').slice(5)));
+    tr.appendChild(el('td',null,a.action||''));
+    const args=Object.entries(a.args||{}).map(([k,v])=>k+'='+v).join(' ');
+    const c=el('td','mono',args||'—');c.style.maxWidth='260px';c.style.overflow='hidden';
+    c.style.textOverflow='ellipsis';c.style.whiteSpace='nowrap';c.title=args;
+    tr.appendChild(c);
+    const r=el('td');
+    r.appendChild(el('span','pill'+(a.ok?' ok':' off'),a.ok?'成功':'失败'));
+    if(a.msg){const s=el('span','tag',a.msg);s.title=a.msg;s.style.maxWidth='220px';
+      s.style.overflow='hidden';s.style.textOverflow='ellipsis';s.style.whiteSpace='nowrap';
+      s.style.display='inline-block';s.style.verticalAlign='middle';r.appendChild(s);}
+    tr.appendChild(r);
+    t.appendChild(tr);
+  });
+  au.appendChild(t);
+}
+
+function renderVer(){
+  const box=document.getElementById('sysVer');if(!box)return;
+  box.innerHTML='';
+  const add=(k,v)=>{box.appendChild(el('span',null,k));box.appendChild(el('b',null,v));};
+  const ver=(document.querySelector('.side-foot .meta span:last-child')||{}).textContent;
+  add('版本',(ver||'').trim()||'—');
+  add('刷新','页面 15 秒 · 区间 60 秒');
+  add('数据源','nginx 日志 · nftables · journald');
+}
+
+/* ---------- 防火墙规则（云厂商式） ---------- */
+let fwCache=null,fwCtx={};
+
+function fwPortLabel(p){return p?p:'全部';}
+
+function fwSrcText(src){
+  if(!src||!src.length)return '任意';
+  return src.length>2?src.slice(0,2).join('、')+' 等 '+src.length+' 个':src.join('、');
+}
+
+function renderFw(st){
+  const box=document.getElementById('fwTable');if(!box)return;
+  const fw=st.fw||{};
+  fwCache=fw;fwCtx=st.fw_ctx||{};
+  const rules=fw.rules||[];
+  const pol=fw.policy||{in:'accept',out:'accept'};
+  const q=((document.getElementById('fwSearch')||{}).value||'').trim().toLowerCase();
+
+  const note=document.getElementById('fwNote');
+  if(note)note.textContent=rules.filter(r=>r.enabled).length+' 条启用 / 共 '+
+    rules.length+' 条 · 默认 '+(pol.in==='drop'?'拒绝':'放行');
+
+  box.innerHTML='';
+  box.appendChild(row(['#','名称 / 备注','匹配条件','动作','命中','启用',''],'th',[1,2,6]));
+
+  const list=rules.filter(r=>{
+    if(!q)return true;
+    return [r.name,r.note,r.port,r.src_label,(r.src||[]).join(' '),r.dir_label]
+      .join(' ').toLowerCase().indexOf(q)>=0;
+  });
+
+  if(!list.length){
+    const tr=el('tr');const td=el('td','empty',
+      rules.length?'没有匹配的规则':'还没有自定义规则：现在等同「端口页的规则 + 全部放行」');
+    td.colSpan=7;tr.appendChild(td);box.appendChild(tr);
+  }
+
+  list.forEach(r=>{
+    const idx=rules.indexOf(r);
+    const tr=el('tr');
+    tr.dataset.id=r.id;
+
+    const c0=el('td');
+    const ord=el('div','fw-ord');
+    const up=el('button',null,'↑');up.type='button';up.title='上移';
+    up.disabled=idx===0||!!q;
+    up.onclick=()=>fwMove(r.id,-1);
+    const dn=el('button',null,'↓');dn.type='button';dn.title='下移';
+    dn.disabled=idx===rules.length-1||!!q;
+    dn.onclick=()=>fwMove(r.id,1);
+    ord.appendChild(up);ord.appendChild(dn);
+    c0.appendChild(ord);
+    tr.appendChild(c0);
+
+    const c1=el('td');
+    const nm=el('b',null,r.name);
+    if(!r.enabled)nm.style.color='var(--dim)';
+    c1.appendChild(nm);
+    if(r.note)c1.appendChild(el('div','fw-sub',r.note));
+    else c1.appendChild(el('div','fw-sub',r.hits
+      ?'命中 '+fmt(r.hits)+' 包'+(r.bytes?' · '+(r.bytes/1048576).toFixed(1)+' MB':'')
+      :'还没命中过'));
+    tr.appendChild(c1);
+
+    const c2=el('td');
+    const cond=el('div','fw-cond');
+    cond.appendChild(badge(r.dir_label,r.dir==='in'?'blue':''));
+    cond.appendChild(badge(r.proto_label,''));
+    cond.appendChild(el('span','mono',fwPortLabel(r.port)));
+    c2.appendChild(cond);
+    const srcLine=el('div','fw-sub');
+    srcLine.textContent=(r.dir==='in'?'来源 ':'目标 ')+fwSrcText(r.src);
+    srcLine.title=(r.src||[]).join(', ')||'任意';
+    c2.appendChild(srcLine);
+    tr.appendChild(c2);
+
+    tr.appendChild(el('td','act '+(r.action==='accept'?'allow':'drop'),r.action_label));
+
+    const c4=el('td','n');
+    c4.textContent=r.hits?fmt(r.hits):'—';
+    c4.title=r.bytes?r.bytes.toLocaleString()+' 字节':'';
+    tr.appendChild(c4);
+
+    const c5=el('td');
+    const tg=el('button','tgl'+(r.enabled?' on':''));
+    tg.type='button';tg.title=r.enabled?'已启用（点击停用）':'已停用（点击启用）';
+    tg.onclick=()=>{
+      tg.disabled=true;
+      api('fw.toggle',{id:r.id,enabled:!r.enabled})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);tg.disabled=false;});
+    };
+    c5.appendChild(tg);
+    tr.appendChild(c5);
+
+    const c6=el('td');
+    c6.style.textAlign='right';
+    const ed=el('button','btn','编辑');
+    ed.onclick=()=>openFwEditor(r);
+    const del=el('button','btn','删除');
+    del.style.marginLeft='6px';
+    del.onclick=()=>{
+      if(!confirm('删除规则「'+r.name+'」？'))return;
+      del.disabled=true;
+      api('fw.del',{id:r.id})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);del.disabled=false;});
+    };
+    c6.appendChild(ed);c6.appendChild(del);
+    tr.appendChild(c6);
+    box.appendChild(tr);
+  });
+}
+
+function fwMove(id,delta){
+  api('fw.move',{id:id,delta:delta})
+    .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>toast(e.message,true));
+}
+
+function renderFwPolicy(st){
+  const box=document.getElementById('fwPolicy');if(!box)return;
+  const fw=st.fw||{},pol=fw.policy||{in:'accept',out:'accept'},ctx=st.fw_ctx||{};
+  box.innerHTML='';
+
+  const rowFor=(label,dir,cur,desc)=>{
+    const wrap=el('div');
+    wrap.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0';
+    const left=el('div');left.style.minWidth='0';
+    left.appendChild(el('div',null,label)).style.fontSize='13px';
+    left.appendChild(el('div','ch-note',desc)).style.marginTop='1px';
+    wrap.appendChild(left);
+    wrap.appendChild(segControl([['accept','放行'],['drop','拒绝','bad']],cur,(v,b,w)=>{
+      if(v==='drop'&&!confirm('把'+label+'的默认策略改成「拒绝」？\n\n只放行规则表里明确允许的流量，'+
+        '规则没覆盖到的端口会立刻不可达。'))return;
+      w.querySelectorAll('button').forEach(x=>x.disabled=true);
+      api('fw.policy',{direction:dir,policy:v})
+        .then(d=>{toast(d.result.msg);(d.result.warnings||[]).forEach(x=>toast(x,true));renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);renderAdmin(st);});
+    },'sm'));
+    return wrap;
+  };
+  box.appendChild(rowFor('入站','in',pol.in,pol.in==='drop'?'未匹配的入站新连接全部丢弃':'未匹配的入站连接放行（默认）'));
+  box.appendChild(rowFor('出站','out',pol.out,pol.out==='drop'?'未匹配的出站新连接全部丢弃':'未匹配的出站连接放行（默认）'));
+
+  const sep=el('div','sep');sep.style.margin='4px 0 6px';box.appendChild(sep);
+
+  const crow=el('div');
+  crow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px';
+  const cl=el('div');
+  cl.appendChild(el('div',null,'应用到容器转发')).style.fontSize='13px';
+  cl.appendChild(el('div','ch-note','入站「拒绝」同时写进 forward 链，覆盖 Docker 端口'))
+    .style.marginTop='1px';
+  crow.appendChild(cl);
+  const ct=el('button','tgl'+(fw.container?' on':''));
+  ct.type='button';ct.title='容器端口走 forward 链，开启后拒绝规则才会生效';
+  ct.onclick=()=>{
+    ct.disabled=true;
+    api('fw.container',{enabled:!fw.container})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);ct.disabled=false;});
+  };
+  crow.appendChild(ct);box.appendChild(crow);
+
+  const warns=[];
+  if(pol.in==='drop'){
+    const admin=ctx.admin_port||8088;
+    const covered=(fw.rules||[]).some(r=>r.enabled&&r.dir==='in'&&r.action==='accept'&&
+      fwCovers(r.port,admin)&&(r.src||[]).length);
+    if(!covered)warns.push('入站默认拒绝，但还没有放行面板端口 '+admin+' 的白名单规则');
+  }
+  if(pol.out==='drop')warns.push('出站默认拒绝：DNS / HTTPS / 接口调用都要单独放行');
+  warns.forEach(x=>{
+    const d=el('div','hint','⚠ '+x);d.style.color='var(--amber)';box.appendChild(d);
+  });
+  const h=el('div','hint','默认策略只作用于新建连接；已建立的连接放行，不会被自己掐断。'+
+    '拒绝规则优先于端口页的放行，放行规则可以穿透端口页的禁止。');
+  box.appendChild(h);
+}
+
+function fwCovers(port,target){
+  if(!port)return true;
+  const p=String(port).split('-');
+  const lo=parseInt(p[0],10),hi=parseInt(p[1]||p[0],10);
+  return lo<=target&&target<=hi;
+}
+
+function renderFwBase(st){
+  const box=document.getElementById('fwBase');if(!box)return;
+  box.innerHTML='';
+  const ports=st.ports||[];
+  ports.forEach(p=>{
+    const ctrl=p.ctrl||{};
+    const line=el('div');
+    line.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;'+
+      'padding:6px 0;border-top:1px solid var(--line)';
+    const left=el('div');left.style.minWidth='0';
+    left.appendChild(el('span','mono',String(p.port))).style.marginRight='6px';
+    left.appendChild(document.createTextNode(p.label));
+    line.appendChild(left);
+    const modeText=(m)=>m==='allow'?'放行':m==='lan'?'内网':m==='cf'?'CF':'禁止';
+    const r=el('div','ch-note');
+    r.textContent='入 '+modeText(ctrl.in||'allow')+' · 出 '+modeText(ctrl.out||'allow');
+    line.appendChild(r);
+    box.appendChild(line);
+  });
+  if(!ports.length)box.appendChild(el('div','empty','没有受管端口'));
+  const b=el('button','btn','去端口页调整');
+  b.style.marginTop='9px';
+  b.onclick=()=>switchTab('adm',{pane:'port'});
+  box.appendChild(b);
+}
+
+function renderFwListen(st){
+  const box=document.getElementById('fwListen');if(!box)return;
+  box.innerHTML='';
+  const list=st.listen||[];
+  if(!list.length){
+    box.appendChild(el('div','empty','读不到监听端口（可能没有 ss，或没有权限）'));
+    return;
+  }
+  const sc=el('div','listen-scroll');
+  list.forEach(x=>{
+    const row2=el('div','listen-row');
+    row2.appendChild(el('div','l-p',String(x.port)));
+    const w=el('div','l-w');
+    const who=(x.container&&x.container.name)?('容器 '+x.container.name):
+      ((x.procs||[]).join('、')||'未知进程');
+    w.textContent=who+(x.addr?' · '+(x.addr==='*'||x.addr==='0.0.0.0'?'监听所有地址':x.addr):'');
+    w.title=w.textContent;
+    row2.appendChild(w);
+    const b=el('button','btn','加规则');
+    b.onclick=()=>openFwEditor(null,{port:String(x.port),name:who+'（'+x.port+'）'});
+    row2.appendChild(b);
+    sc.appendChild(row2);
+  });
+  box.appendChild(sc);
+  const h=el('div','hint','Docker 端口通常走 forward 链：先在上面打开「应用到容器转发」，拒绝规则才会作用到容器。');
+  box.appendChild(h);
+}
+
+/* ---------- 地域封锁（境内 / 境外） ---------- */
+function geoRow(o){
+  const w=el('div','swrow');
+  const left=el('div');left.style.minWidth='0';
+  const h=el('div','sw-h');
+  h.appendChild(el('span',null,o.title));
+  h.appendChild(el('span','pill '+(o.on?'ok':'off'),o.pill));
+  left.appendChild(h);
+  left.appendChild(el('div','sw-d',o.desc));
+  w.appendChild(left);
+
+  const tg=el('button','tgl'+(o.on?' on':''));
+  tg.type='button';
+  tg.title=o.on?'点击关闭':'点击开启';
+  tg.dataset.k=o.key||'';
+  tg.onclick=()=>{tg.disabled=true;o.onToggle(!o.on);};
+  w.appendChild(tg);
+
+  if(o.extra)w.appendChild(o.extra);
+  return w;
+}
+
+function renderGeoLock(st){
+  const box=document.getElementById('geoSwitch');if(!box)return;
+  const g=st.geo_lock||{};
+  const gin=g.in||{enabled:false,scope:'web',scope_label:'只挡 Web 端口',ports:[]};
+  const gout=g.out||{enabled:false};
+  const cn=g.cn||{};
+  const ready=(cn.v4||0)>0;
+  box.innerHTML='';
+
+  const note=document.getElementById('geoNote');
+  if(note){
+    note.textContent=(gin.enabled?'外来开（'+(gin.scope_label||'')+'）':'外来关')+
+      ' · '+(gout.enabled?'对外开':'对外关')+
+      ' · 国内 '+(cn.v4||0)+' 段';
+  }
+
+  const scopeExtra=el('div','sw-x');
+  scopeExtra.appendChild(el('span','ch-note','作用范围'));
+  scopeExtra.appendChild(segControl(
+    [['web','只挡 Web 端口'],['all','所有端口（含 SSH）']],
+    gin.scope||'web',
+    (v)=>{
+      if(v==='all'&&!confirm('把范围改成「所有端口」？\n\n境外 IP 连 SSH 也会被挡在外面。'+
+        '确认豁免清单里有你当前的地址，或你就在内网。')){renderGeoLock(lastAdmin);return;}
+      api('geo.scope',{scope:v})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);renderGeoLock(lastAdmin);});
+    },'sm'));
+
+  box.appendChild(geoRow({
+    key:'in',
+    title:'外来：境外 IP 访问本机',
+    pill:gin.enabled?'已开启':'已关闭',
+    on:!!gin.enabled,
+    desc:gin.enabled
+      ? '境外来源访问「'+(gin.scope==='web'?'Web 端口':'所有端口')+'」直接丢弃；'+
+        '国内 / 内网 / 我的 IP / Cloudflare / 白名单照旧。'
+      : '打开后，除国内网段和豁免清单之外的来源一律丢弃——相当于把家门的对讲机只留给国内。',
+    extra:scopeExtra,
+    onToggle:(want)=>{
+      if(want&&!confirm('开启「外来」拦截？\n\n'+
+        '除国内网段 + 豁免清单之外的来源都会被丢弃。\n'+
+        '当前范围：'+(gin.scope_label||'')+'\n\n'+
+        '确认你现在能通过内网或白名单访问这个面板。')){renderGeoLock(lastAdmin);return;}
+      api('geo.lock',{direction:'in',enabled:want})
+        .then(d=>{toast(d.result.msg);(d.result.warnings||[]).forEach(x=>toast(x,true));renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);renderGeoLock(lastAdmin);});
+    },
+  }));
+
+  box.appendChild(geoRow({
+    key:'out',
+    title:'对外：本机主动连境外',
+    pill:gout.enabled?'已开启':'已关闭',
+    on:!!gout.enabled,
+    desc:gout.enabled
+      ? '本机新建到境外的连接会被丢弃；已建立的连接和 DNS 照常。'
+      : '打开后，本机主动发起的境外连接一律丢弃（回给境外访客的响应不算，已建立的连接放行）。',
+    onToggle:(want)=>{
+      if(want&&!confirm('开启「对外」拦截？\n\n本机主动连境外的请求会被丢弃：\n'+
+        '· apt / pip 更新、证书续期、时钟同步会失败\n'+
+        '· app 里调用的境外 API 会超时\n'+
+        '· Cloudflare 的 API 在境外，边缘规则同步会失败\n\n'+
+        'DNS 服务器会自动加进豁免。确定开启？')){renderGeoLock(lastAdmin);return;}
+      api('geo.lock',{direction:'out',enabled:want})
+        .then(d=>{toast(d.result.msg);(d.result.warnings||[]).forEach(x=>toast(x,true));renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);renderGeoLock(lastAdmin);});
+    },
+  }));
+
+  if(!ready){
+    const w=el('div','geo-warn','⚠ 还没有国内网段清单，两个开关都会被后端拒绝。先点右下角「刷新网段」。');
+    w.style.marginTop='10px';box.appendChild(w);
+  }else if((gin.enabled||gout.enabled)&&g.loaded===false){
+    const w=el('div','geo-warn','⚠ 规则已下发，但内核里的网段还是空的（刚重启或集合被清过），'+
+      '所以暂时还没真正拦截。采集进程下次运行会自动补一遍，也可以手动执行 hw.py geo status 看状态。');
+    w.style.marginTop='10px';box.appendChild(w);
+  }
+
+  const hint=el('div','hint',
+    '判定顺序：放行/拒绝规则表 → 地域拦截 → 端口页基线 → 默认策略。'+
+    '所以在「防火墙」里显式放行的地址可以穿透地域拦截，适合临时开一个口子。'+
+    '地域拦截只看 IP，不认域名——CDN 后面的站点要用 Cloudflare 回源网段豁免。');
+  hint.style.marginTop='10px';
+  box.appendChild(hint);
+}
+
+function renderGeoCn(st){
+  const box=document.getElementById('geoCn');if(!box)return;
+  const g=st.geo_lock||{},cn=g.cn||{};
+  box.innerHTML='';
+  const kv=el('div','geo-kv');
+  const add=(k,v,title)=>{
+    const b=el('b',null,v);
+    kv.appendChild(el('span',null,k));
+    if(title)b.title=title;
+    kv.appendChild(b);
+  };
+  add('IPv4 网段',(cn.v4||0)+' 段');
+  add('IPv6 网段',(cn.v6||0)+' 段');
+  add('来源',cn.source||'未刷新');
+  add('更新时间',cn.updated?ts2str(cn.updated)+
+    (cn.age_days!==null&&cn.age_days!==undefined?'（'+cn.age_days+' 天前）':''):'从未');
+  box.appendChild(kv);
+  if(cn.age_days!==null&&cn.age_days!==undefined&&cn.age_days>30){
+    const w=el('div','geo-warn','⚠ 网段清单已经 '+cn.age_days+' 天没更新，新分配的国内段可能被误判。点「刷新网段」。');
+    w.style.marginTop='9px';box.appendChild(w);
+  }
+  const h=el('div','hint',
+    '清单来自公开的国家级 CIDR 列表，刷新时会自动合并相邻网段。'+
+    '只在开着封锁时每 14 天自动续一次，其余时间不联网。');
+  box.appendChild(h);
+  const note=document.getElementById('geoCnNote');
+  if(note)note.textContent=(cn.v4||0)&&cn.v6?('IPv4 '+cn.v4+' / IPv6 '+cn.v6):
+    (cn.v4?'只有 IPv4 清单':'空');
+}
+
+function renderGeoExempt(st){
+  const box=document.getElementById('geoExempt');if(!box)return;
+  const g=st.geo_lock||{},ex=g.exempt||{};
+  box.innerHTML='';
+
+  const kv=el('div','geo-kv');
+  const add=(k,v,title)=>{
+    const b=el('b',null,v||'—');
+    if(title)b.title=title;
+    kv.appendChild(el('span',null,k));
+    kv.appendChild(b);
+  };
+  const lan=(ex.lan||[]),own=(ex.own||[]),dns=(ex.dns||[]);
+  add('内网',lan.length?lan.join('、'):'未配置（firewall.lan_cidrs）',lan.join('\n'));
+  add('我的 IP',own.length?own.join('、'):'未配置（own_ips）',own.join('\n'));
+  add('Cloudflare',ex.cf?ex.cf+' 个回源网段':'未配置');
+  add('DNS',dns.length?dns.join('、'):'本机解析，无需豁免',dns.join('\n'));
+  box.appendChild(kv);
+
+  const t=el('div','ch-note','自定义放行');
+  t.style.margin='10px 0 6px';
+  box.appendChild(t);
+
+  const chips=el('div','ex-chips');
+  const allow=g.allow||[];
+  if(!allow.length){
+    chips.appendChild(el('span','ch-note','还没有。境外设备要访问时，把它的出口 IP 加进来。'));
+  }
+  allow.forEach(ip=>{
+    const c=el('span','ex-chip');
+    c.appendChild(el('span',null,ip));
+    const x=el('button',null,'×');
+    x.type='button';x.title='移除';
+    x.onclick=()=>{
+      x.disabled=true;
+      api('geo.allow',{op:'remove',ip:ip})
+        .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+        .catch(e=>{toast(e.message,true);x.disabled=false;});
+    };
+    c.appendChild(x);
+    chips.appendChild(c);
+  });
+  box.appendChild(chips);
+
+  const row2=el('div','row');
+  row2.style.marginTop='9px';
+  const inp=el('input');
+  inp.type='text';inp.placeholder='1.2.3.4 或 10.0.0.0/8';
+  inp.style.maxWidth='180px';
+  const b=el('button','btn','加入放行');
+  b.onclick=()=>{
+    const v=(inp.value||'').trim();
+    if(!v){toast('填一个 IP 或网段',true);return;}
+    b.disabled=true;
+    api('geo.allow',{op:'add',ip:v})
+      .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);b.disabled=false;});
+  };
+  row2.appendChild(inp);row2.appendChild(b);
+  box.appendChild(row2);
+}
+
+function renderGeoHits(st){
+  const box=document.getElementById('geoHits');if(!box)return;
+  const g=st.geo_lock||{},h=g.hits||{};
+  const gin=h.in||{},gout=h.out||{};
+  box.innerHTML='';
+  const mb=n=>((n||0)/1048576).toFixed(n>=1048576?1:2)+' MB';
+  const kv=el('div','geo-kv');
+  const add=(k,v)=>{kv.appendChild(el('span',null,k));kv.appendChild(el('b',null,v));};
+  add('外来已丢弃',fmt(gin.packets||0)+' 包');
+  add('外来流量',mb(gin.bytes));
+  add('对外已丢弃',fmt(gout.packets||0)+' 包');
+  add('对外流量',mb(gout.bytes));
+  box.appendChild(kv);
+  box.appendChild(el('div','hint', g.counters
+    ? '数字来自 nft 计数器；重建规则表（改端口、改规则）会归零。'
+    : '读不到 nft 计数器：可能规则还没下发，或当前用户没有权限。'));
+}
+
+function openGeoNft(){
+  const ui=openSheet('地域封锁规则','nftables 判定部分');
+  ui.body.innerHTML='<div class="empty">读取中…</div>';
+  fetch('/api/geo',{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)throw new Error((j&&j.error)||'读取失败');
+      ui.body.innerHTML='';
+      ui.body.appendChild(el('pre','fw-preview',j.data.nft||'（未开启）'));
+      ui.body.appendChild(el('div','hint',
+        'cn4 / cn6 是允许的国内网段，geo_allow4/6 是内网 + 我的 IP + Cloudflare + '+
+        'DNS + 自定义放行。完整集合成员在服务器的 /etc/nftables.conf。'));
+    })
+    .catch(e=>{
+      ui.body.innerHTML='';
+      ui.body.appendChild(el('div','empty',e.message));
+    });
+  const close=el('button','btn','关闭');
+  close.onclick=closeModal;
+  ui.foot.appendChild(el('span','grow'));
+  ui.foot.appendChild(close);
+}
+
+/* ---------- 规则编辑器 ---------- */
+function openFwEditor(rule,preset){
+  const r=Object.assign({id:'',name:'',dir:'in',proto:'tcp',port:'',src:[],action:'accept',
+    enabled:true,note:''},rule||{},preset||{});
+  /* src 可能是数组（服务端）也可能是逗号串（预设），统一成数组 */
+  if(!Array.isArray(r.src))r.src=String(r.src||'').split(/[\s,，]+/).filter(Boolean);
+  const ui=openSheet(r.id?'编辑规则':'新建规则',
+    r.id?('规则 '+r.id):'保存后立即写入 nftables');
+  const body=ui.body;
+
+  const hint=el('div','fw-note');
+  hint.innerHTML='<span>规则按顺序匹配，命中即生效。放行可以当白名单（穿透端口页的禁止），'+
+    '拒绝比端口页更细。来源/目标填多个用逗号隔开。</span>';
+  body.appendChild(hint);
+
+  const fName=el('input');fName.type='text';fName.value=r.name;fName.placeholder='例如：SSH 仅内网';
+  body.appendChild(fldRow('名称',fName));
+
+  let dir=r.dir;
+  const dirSeg=segControl([['in','入站'],['out','出站']],dir,(v)=>{dir=v;srcLabel.textContent=v==='in'?'来源地址':'目标地址';});
+  body.appendChild(fldRow('方向',dirSeg));
+
+  let proto=r.proto;
+  const portWrap=el('div');
+  portWrap.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap';
+  const ptype=el('select','mini');
+  [['one','单个端口'],['range','端口范围'],['all','全部端口']].forEach(([v,l])=>{
+    const o=el('option',null,l);o.value=v;
+    const cur=!r.port?'all':(String(r.port).indexOf('-')>=0?'range':'one');
+    if(cur===v)o.selected=true;
+    ptype.appendChild(o);
+  });
+  const p1=el('input');p1.type='text';p1.placeholder='22';p1.style.width='78px';
+  p1.className='mini';
+  const dash=el('span','ch-note','—');
+  const p2=el('input');p2.type='text';p2.placeholder='8100';p2.className='mini';
+  p2.style.width='78px';
+  const bits=String(r.port||'').split('-');
+  p1.value=bits[0]||'';p2.value=bits[1]||'';
+  portWrap.appendChild(ptype);portWrap.appendChild(p1);portWrap.appendChild(dash);portWrap.appendChild(p2);
+
+  const syncPort=()=>{
+    const all=ptype.value==='all',rng=ptype.value==='range';
+    p1.style.display=all?'none':'';p2.style.display=rng?'':'none';dash.style.display=rng?'':'none';
+    if(all){p1.value='';p2.value='';}
+    portWrap.title=proto==='icmp'?'ICMP 没有端口，端口条件会被忽略':'';
+  };
+  ptype.onchange=syncPort;
+  syncPort();
+
+  const protoWrap=el('div');
+  protoWrap.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+  const protoSeg=segControl([['tcp','TCP'],['udp','UDP'],['icmp','ICMP'],['all','全部']],proto,(v,b,w)=>{
+    proto=v;
+    const icmp=v==='icmp';
+    portWrap.style.opacity=icmp?'.45':'';
+    portWrap.querySelectorAll('select,input').forEach(x=>x.disabled=icmp);
+    if(icmp&&ptype.value!=='all'){ptype.value='all';syncPort();}
+  },'sm');
+  protoWrap.appendChild(protoSeg);
+  body.appendChild(fldRow('协议',protoWrap));
+  body.appendChild(fldRow('端口',portWrap));
+
+  const srcLabel=el('label',null,dir==='in'?'来源地址':'目标地址');
+  const srcWrap=el('div');srcWrap.style.cssText='display:flex;flex-direction:column;gap:7px';
+  const srcInput=el('input');srcInput.type='text';srcInput.placeholder='留空表示任意；可填 1.2.3.4, 10.0.0.0/8';
+  srcInput.value=(r.src||[]).join(', ');
+  const chips=el('div','chips');
+  const setSrc=(v)=>{srcInput.value=v;};
+  [['任意',''],['内网',(fwCtx.lan||[]).join(', ')],
+   ['Cloudflare',(fwCtx.cf||[]).join(', ')],
+   ['我的 IP',(fwCtx.own||[]).join(', ')]].forEach(([label,val])=>{
+    if(!val&&label!=='任意')return;
+    const c=el('button','chip2',label);
+    c.type='button';
+    c.title=val||'不限制来源';
+    c.onclick=()=>setSrc(val);
+    chips.appendChild(c);
+  });
+  srcWrap.appendChild(srcInput);
+  srcWrap.appendChild(chips);
+  const srcField=el('div','fld');
+  srcField.appendChild(srcLabel);
+  const sc=el('div','ctl');sc.appendChild(srcWrap);srcField.appendChild(sc);
+  body.appendChild(srcField);
+
+  let action=r.action;
+  const actSeg=segControl([['accept','放行'],['drop','拒绝','bad']],action,(v)=>{action=v;});
+  body.appendChild(fldRow('动作',actSeg));
+
+  let enabled=r.enabled!==false;
+  const enTgl=el('button','tgl'+(enabled?' on':''));
+  enTgl.type='button';enTgl.title='停用后规则保留但不生效';
+  enTgl.onclick=()=>{enabled=!enabled;enTgl.classList.toggle('on',enabled);};
+  body.appendChild(fldRow('启用',enTgl));
+
+  const note=el('input');note.type='text';note.value=r.note||'';note.placeholder='选填，写清楚为什么加这条';
+  body.appendChild(fldRow('备注',note));
+
+  const admin=st_adminPort();
+  const warn=el('div','hint');
+  warn.style.color='var(--amber)';
+  body.appendChild(warn);
+  const check=()=>{
+    warn.textContent='';
+    if(action!=='drop'||dir!=='in')return;
+    const pt=ptype.value==='all'?'':(ptype.value==='range'?p1.value+'-'+p2.value:p1.value);
+    if(fwCovers(pt,admin)&&!srcInput.value.trim()){
+      warn.textContent='⚠ 这条规则会连面板端口 '+admin+' 一起拒绝，保存时会被后端拦下。';
+    }
+  };
+  [ptype,p1,p2].forEach(x=>x.addEventListener('input',check));
+  [ptype].forEach(x=>x.addEventListener('change',check));
+  actSeg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setTimeout(check,0)));
+  dirSeg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setTimeout(check,0)));
+  srcInput.addEventListener('input',check);
+
+  const delBtn=el('button','btn danger','删除');
+  const cancel=el('button','btn','取消');
+  const save=el('button','btn primary','保存并应用');
+  if(!r.id)delBtn.style.display='none';
+  cancel.onclick=closeModal;
+  delBtn.onclick=()=>{
+    if(!confirm('删除规则「'+(r.name||r.id)+'」？'))return;
+    delBtn.disabled=true;
+    api('fw.del',{id:r.id})
+      .then(d=>{closeModal();toast(d.result.msg);renderAdmin(d.data);})
+      .catch(e=>{toast(e.message,true);delBtn.disabled=false;});
+  };
+  save.onclick=()=>{
+    let port='';
+    if(proto!=='icmp'&&ptype.value!=='all'){
+      port=ptype.value==='range'?(p1.value+'-'+p2.value):p1.value;
+      if(!p1.value.trim()||(ptype.value==='range'&&!p2.value.trim())){
+        toast('填一下端口',true);return;
+      }
+    }
+    const params={
+      name:fName.value.trim()||'未命名规则',
+      dir:dir,proto:proto,port:port,src:srcInput.value.trim(),
+      action:action,note:note.value.trim(),enabled:enabled,
+    };
+    if(r.id)params.id=r.id;
+    save.disabled=true;
+    api('fw.save',params)
+      .then(d=>{
+        closeModal();
+        toast(d.result.msg);
+        (d.result.warnings||[]).forEach(w=>toast(w,true));
+        renderAdmin(d.data);
+      })
+      .catch(e=>{toast(e.message,true);save.disabled=false;});
+  };
+  ui.foot.appendChild(delBtn);
+  ui.foot.appendChild(el('span','grow'));
+  ui.foot.appendChild(cancel);
+  ui.foot.appendChild(save);
+}
+
+function fldRow(label,...nodes){
+  const w=el('div','fld');
+  w.appendChild(el('label',null,label));
+  const ctl=el('div','ctl');
+  nodes.forEach(n=>ctl.appendChild(n));
+  w.appendChild(ctl);
+  return w;
+}
+
+function st_adminPort(){return (fwCtx&&fwCtx.admin_port)||8088;}
+
+/* 看实际下发的 nft 片段 */
+function openFwNft(){
+  const ui=openSheet('nftables 规则','fw_in / fw_out / fw_fwd 三条子链');
+  ui.body.innerHTML='<div class="empty">读取中…</div>';
+  fetch('/api/fw',{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)throw new Error((j&&j.error)||'读取失败');
+      ui.body.innerHTML='';
+      const pre=el('pre','fw-preview',j.data.nft||'（空）');
+      ui.body.appendChild(pre);
+      ui.body.appendChild(el('div','hint',
+        '这是当前配置渲染出来的子链。默认策略、端口页基线和封禁名单在主链上，'+
+        '完整文件在服务器的 /etc/nftables.conf。'));
+    })
+    .catch(e=>{
+      ui.body.innerHTML='';
+      ui.body.appendChild(el('div','empty',e.message));
+    });
+  const close=el('button','btn','关闭');
+  close.onclick=closeModal;
+  ui.foot.appendChild(el('span','grow'));
+  ui.foot.appendChild(close);
+}
+
+/* ---------- 管理页总入口 ---------- */
+let lastAdmin=null;
+
+function renderAdmin(st){
+  lastAdmin=st;
+  if(st.banned)setBanMap(st.banned);
+  renderStrip(st);
+  renderPorts(st);
+  renderFw(st);
+  renderFwPolicy(st);
+  renderFwBase(st);
+  renderFwListen(st);
+  renderGeoLock(st);
+  renderGeoCn(st);
+  renderGeoExempt(st);
+  renderGeoHits(st);
+  renderUnits(st);
+  renderGuard(st);
+  renderHealth(st);
+  renderAuth(st.auth);
+  renderSsh(st);
+  renderBlocked(st);
+  renderBanMode(st);
+  renderCf(st.cf,st);
+  renderAudit(st);
+  renderVer();
+}
+
+function renderAdminRefresh(){
+  fetch('/api/state',{credentials:'same-origin'})
+    .then(r=>r.ok?r.json():null)
+    .then(d=>{if(d&&d.ok)renderAdmin(d.data);})
+    .catch(()=>{});
+}
+
+/* 防火墙页的按钮只绑一次 */
+document.getElementById('fwAdd').onclick=()=>openFwEditor(null);
+document.getElementById('fwSeed').onclick=()=>{
+  if(!confirm('按「端口」页的出入站类型生成一批放行规则？\n\n'+
+    '已经存在相同规则的端口会跳过，不会重复添加。'))return;
+  const b=document.getElementById('fwSeed');b.disabled=true;
+  api('fw.seed',{})
+    .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>{toast(e.message,true);b.disabled=false;});
+};
+document.getElementById('fwShow').onclick=openFwNft;
+document.getElementById('fwSearch').addEventListener('input',()=>{
+  if(lastAdmin)renderFw(lastAdmin);
+});
+
+/* 地域页的两个按钮只绑一次 */
+document.getElementById('geoShow').onclick=openGeoNft;
+document.getElementById('geoRefresh').onclick=()=>{
+  const b=document.getElementById('geoRefresh');
+  const old=b.textContent;
+  b.disabled=true;b.textContent='刷新中…';
+  api('geo.cn',{})
+    .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;b.textContent=old;});
+};
+
+/* ---------- Cloudflare 边缘 ---------- */
+let cfRulesCache=null;
+
+function renderCf(cf,st){
+  const box=document.getElementById('cfState');if(!box)return;
+  box.innerHTML='';
+  cf=cf||{};st=st||{};
+  const api=cf.api||{};
+  const on=!!(api.configured&&api.enabled);
+
+  const line=el('div','row');line.style.marginBottom='8px';
+  line.appendChild(el('span','pill'+(on?' ok':''),on?'已启用':(api.has_token?'未启用':'未配置')));
+  if(api.zone)line.appendChild(el('span','tag',api.zone));
+  if(api.has_token)line.appendChild(el('span','hint','Token '+api.token));
+  line.appendChild(el('span','hint',api.auto_sync?'自动同步开':'自动同步关'));
+  box.appendChild(line);
+
+  if(!api.has_token){
+    box.appendChild(el('div','hint','填一个 API Token 就能把封禁推到边缘。Token 需要 Zone → Firewall 的编辑权限。'));
+  }
+
+  const last=cf.last;
+  if(last&&last.at){
+    const d=el('div','hint');
+    d.style.color=(last.ok===false)?'var(--red)':'var(--dim)';
+    d.textContent='上次同步 '+(last.at?ts2str(last.at):'')+'：'+(last.msg||'—')+
+      (last.added&&last.added.length?('（'+last.added.join('、')+'）'):'');
+    box.appendChild(d);
+  }
+
+  const box2=document.getElementById('cfList');
+  box2.innerHTML='';
+  box2.appendChild(row(['IP','备注','创建时间',''],'th'));
+  if(!cfRulesCache){
+    const tr=el('tr');const td=el('td','empty','点「刷新规则」从 Cloudflare 拉取');td.colSpan=4;tr.appendChild(td);box2.appendChild(tr);
+  }else if(!cfRulesCache.length){
+    const tr=el('tr');const td=el('td','empty','边缘还没有规则');td.colSpan=4;tr.appendChild(td);box2.appendChild(tr);
+  }else{
+    cfRulesCache.slice(0,30).forEach(r=>{
+      const tr=el('tr');
+      const cIp=el('td');if(r.ip)cIp.appendChild(ipSpan(r.ip));else cIp.textContent='—';
+      tr.appendChild(cIp);
+      const n=el('td');n.appendChild(el('span','tag',r.notes||r.mode||''));
+      tr.appendChild(n);
+      tr.appendChild(el('td',null,(r.created||'').slice(0,10)||'—'));
+      const act=el('td');act.style.textAlign='right';
+      const b=el('button','btn','删除');
+      b.onclick=()=>{
+        if(!confirm('从 Cloudflare 删除 '+(r.ip||'')+' 的这条规则？'))return;
+        b.disabled=true;
+        api('cf.unblock',{ip:r.ip})
+          .then(d=>{toast(d.result.msg);cfRulesCache=null;renderAdmin(d.data);})
+          .catch(e=>{toast(e.message,true);b.disabled=false;});
+      };
+      act.appendChild(b);tr.appendChild(act);
+      box2.appendChild(tr);
+    });
+  }
+}
+
+document.getElementById('cfSave').onclick=()=>{
+  const tok=document.getElementById('cfToken').value.trim();
+  const zone=document.getElementById('cfZone').value.trim();
+  const p={};
+  if(tok)p.api_token=tok;
+  if(zone)p.zone_name=zone;
+  if(!tok&&!zone){toast('填 Token 或域名再保存',true);return;}
+  p.enabled=true;
+  const b=document.getElementById('cfSave');b.disabled=true;
+  api('cf.set',p)
+    .then(d=>{
+      toast(d.result.msg);
+      document.getElementById('cfToken').value='';
+      renderAdmin(d.data);
+    })
+    .catch(e=>{toast(e.message,true);b.disabled=false;})
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('cfTest').onclick=()=>{
+  const b=document.getElementById('cfTest');b.disabled=true;
+  api('cf.test',{})
+    .then(d=>{
+      const txt=d.result.msg||'';
+      toast(txt);
+      renderAdmin(d.data);
+    })
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('cfSync').onclick=()=>{
+  const b=document.getElementById('cfSync');b.disabled=true;
+  api('cf.sync',{})
+    .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('cfRulesBtn').onclick=()=>{
+  const b=document.getElementById('cfRulesBtn');b.disabled=true;
+  api('cf.rules',{})
+    .then(d=>{cfRulesCache=d.result.rules||[];toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('cfPurge').onclick=()=>{
+  if(!confirm('清空 Cloudflare 全站缓存？'))return;
+  const b=document.getElementById('cfPurge');b.disabled=true;
+  api('cf.purge',{})
+    .then(d=>toast(d.result.msg))
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('banModeBtn').onclick=()=>{
+  const mode=document.getElementById('banMode').value;
+  if(!confirm('切换封禁响应方式？\n\n会改写站点配置里的 return 和 access_log，并 reload nginx（失败自动还原）。\n\n改完当前已封禁的请求立刻按新方式响应。'))return;
+  const b=document.getElementById('banModeBtn');b.disabled=true;
+  api('nginx.mode',{mode})
+    .then(d=>{toast(d.result.msg);renderAdmin(d.data);})
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('blkBtn').onclick=()=>{
+  const ip=document.getElementById('blkIp').value.trim();
+  if(!ip){toast('请填写 IP',true);return;}
+  const hours=parseInt(document.getElementById('blkHours').value,10);
+  const layer=document.getElementById('blkLayer').value;
+  const b=document.getElementById('blkBtn');
+  b.disabled=true;
+  api('ip.block',{ip,hours,layer})
+    .then(d=>{
+      toast(d.result.msg);
+      document.getElementById('blkIp').value='';
+      renderAdmin(d.data);
+    })
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('pwaBtn').onclick=()=>{
+  const p1=document.getElementById('pwa1').value;
+  const p2=document.getElementById('pwa2').value;
+  if(p1.length<12){toast('密码至少 12 位',true);return;}
+  if(p1!==p2){toast('两次输入不一致',true);return;}
+  if(!confirm('确定更新面板登录密码？\n\n用户名固定 admin，改完旧密码立即失效，\n当前页面需要重新登录。'))return;
+  const b=document.getElementById('pwaBtn');
+  b.disabled=true;
+  api('auth.password',{password:p1,confirm:p2})
+    .then(d=>{
+      document.getElementById('pwa1').value='';
+      document.getElementById('pwa2').value='';
+      PANEL_STALE=true;
+      const bn=document.getElementById('banner');
+      bn.className='banner yellow';
+      document.getElementById('bannerText').textContent=
+        '面板密码已更新：请关闭本标签页重新打开，用新密码登录（旧密码已失效）';
+      toast(d.result.msg);
+    })
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+document.getElementById('pwBtn').onclick=()=>{
+  const p1=document.getElementById('pw1').value;
+  const p2=document.getElementById('pw2').value;
+  if(p1.length<12){toast('密码至少 12 位',true);return;}
+  if(p1!==p2){toast('两次输入不一致',true);return;}
+  if(!confirm('确定更新 root 密码？\n\n如果之后忘记密码，只能从 PVE Console 进入恢复。'))return;
+  const b=document.getElementById('pwBtn');
+  b.disabled=true;
+  api('ssh.password',{password:p1,confirm:p2})
+    .then(d=>{
+      toast(d.result.msg);
+      document.getElementById('pw1').value='';
+      document.getElementById('pw2').value='';
+    })
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{b.disabled=false;});
+};
+
+/* ============ 策略 ============ */
+const SRC_LABEL={ssh_fail:'SSH 失败登录',http_blocked:'被拦截请求',http_total:'全部请求',
+  http_error:'4xx/5xx 响应',http_reject:'超大请求被拒',distinct_paths:'不重复路径',
+  sensitive:'敏感路径',long_uri:'超长 URL',big_req:'超大请求报文',
+  bad_method:'异常请求方法',bad_proto:'异常协议版本',bad_ua:'恶意 User-Agent',
+  honeypot:'蜜罐路径'};
+
+/* 给"有判定线"的来源补上具体数值，避免看着阈值却不知道按多少字节算 */
+function srcLabel(src,lim){
+  lim=lim||{};
+  const base=SRC_LABEL[src]||src;
+  if(src==='long_uri')return base+'（≥'+(lim.uri_len||1024)+' 字节）';
+  if(src==='big_req')return base+'（≥'+(lim.req_bytes||65536)+' 字节）';
+  if(src==='bad_ua')return base+'（空 / >'+(lim.ua_len||400)+' 字符 / 工具指纹）';
+  if(src==='bad_method')return base+'（GET/POST/HEAD/OPTIONS 之外）';
+  if(src==='http_reject')return base+'（413 / 414 / 431）';
+  return base;
+}
+
+function loadPolicy(){
+  document.getElementById('pol-switches').innerHTML='<div class="empty">读取中…</div>';
+  fetch('/api/state',{credentials:'same-origin'})
+    .then(async r=>{
+      if(r.status===401)throw new Error('需要登录：刷新页面后输入管理员密码');
+      const d=await r.json();
+      if(!d.ok)throw new Error(d.error||'读取失败');
+      renderPolicy(d.data);
+    })
+    .catch(e=>toast(e.message,true));
+}
+
+function setPolicy(key,val,btn){
+  if(btn)btn.disabled=true;
+  api('policy.set',{key,value:val})
+    .then(d=>{toast(d.result.msg);renderPolicy(d.data);})
+    .catch(e=>{toast(e.message,true);if(btn)btn.disabled=false;});
+}
+
+function swRow(label,desc,on,toggle){
+  const r=el('div','srow');
+  const t=el('div','s-t');
+  const b=el('b');
+  b.appendChild(document.createTextNode(label));
+  b.appendChild(el('span','pill'+(on?' ok':' off'),on?'已开启':'已关闭'));
+  t.appendChild(b);
+  t.appendChild(el('div','s-t',desc));
+  r.appendChild(t);
+  r.appendChild(el('span'));
+  const tgl=el('button','tgl'+(on?' on':''));
+  tgl.type='button';
+  tgl.onclick=()=>{tgl.disabled=true;toggle(!on,tgl);};
+  r.appendChild(tgl);
+  return r;
+}
+
+function renderPolicy(st){
+  const p=st.policy||{};
+  const box=document.getElementById('pol-switches');box.innerHTML='';
+  box.appendChild(swRow('策略总开关','关闭后不匹配任何规则，也不自动封禁',
+    !!p.enabled,(v,b)=>setPolicy('enabled',v,b)));
+  box.appendChild(swRow('自动封禁','关闭时只识别并记录，不下发封禁规则',
+    !!p.auto_ban,(v,b)=>setPolicy('auto_ban',v,b)));
+  box.appendChild(swRow('演练模式','只记录「本来会封谁」，真正下发留到下轮手动确认',
+    !!p.dry_run,(v,b)=>setPolicy('dry_run',v,b)));
+  const cf=st.cf&&st.cf.api||{};
+  if(cf.configured){
+    box.appendChild(swRow('同步到 Cloudflare',
+      '自动封禁后同时写一条边缘 block 规则，请求在 CF 就被拦掉'+(cf.zone?'（'+cf.zone+'）':''),
+      !!cf.auto_sync,(v,b)=>{
+        b.disabled=true;
+        api('cf.set',{auto_sync:v})
+          .then(d=>{toast(d.result.msg);renderPolicy(d.data);})
+          .catch(e=>{toast(e.message,true);b.disabled=false;});
+      }));
+  }
+  if(p.last){
+    box.appendChild(el('div','hint','上次评估 '+ts2str(p.last.at)+'：'+(p.last.msg||'')));
+  }
+  (p.warnings||[]).forEach(w=>{
+    const d=el('div','hint','⚠ '+w);d.style.color='var(--amber)';box.appendChild(d);
+  });
+  const ab=document.getElementById('polApply');
+  if(ab){
+    ab.disabled=!!p.dry_run;
+    ab.title=p.dry_run?'演练模式下不会真的下发规则，先在上面关掉演练模式':'';
+  }
+  renderLimits(p.limits||{}, p.log_fields||{});
+  renderRules(p.rules||[], p.limits||{});
+  renderWhitelist(p.whitelist||[]);
+  renderBans(p.bans||[]);
+}
+
+function renderLimits(lim,fields){
+  const box=document.getElementById('pol-limits');box.innerHTML='';
+  const line=el('div',null,
+    '异常判定线：URI ≥ '+(lim.uri_len||1024)+' 字节 · 请求报文 ≥ '+
+    (lim.req_bytes||65536)+' 字节 · UA 长度 > '+(lim.ua_len||400)+' 字符');
+  box.appendChild(line);
+  box.appendChild(el('div',null,
+    '需要日志字段：$http_user_agent '+(fields.user_agent?'✓':'✗')+
+    ' · $request_length '+(fields.request_length?'✓':'✗')));
+  box.appendChild(el('div',null,
+    '改判定线：hw.py policy limit uri_len|req_bytes|ua_len <数值>（只影响之后的日志）'));
+}
+
+function numInput(v,w){
+  const i=el('input');i.type='number';i.value=v;if(w)i.style.width=w+'px';
+  return i;
+}
+
+function renderRules(rules,lim){
+  lim=lim||{};
+  const t=document.getElementById('pol-rules');t.innerHTML='';
+  t.appendChild(row(['规则','窗口(秒)','阈值','时长(时)','层',''],'th'));
+  if(!rules.length){
+    const tr=el('tr');const td=el('td','empty','没有配置任何规则');td.colSpan=6;
+    tr.appendChild(td);t.appendChild(tr);return;
+  }
+  rules.forEach(r=>{
+    const tr=el('tr');
+
+    const c1=el('td');
+    const nm=el('input');nm.type='text';nm.value=r.name||r.id;
+    c1.appendChild(nm);
+    c1.appendChild(el('div','geo',srcLabel(r.source,lim)));
+    tr.appendChild(c1);
+
+    const w=numInput(r.window),th=numInput(r.threshold),h=numInput(r.hours);
+    [['窗口',w],['阈值',th],['时长',h]].forEach(([lbl,i])=>{
+      const td=el('td');td.appendChild(el('span','lbl',lbl));
+      td.appendChild(i);tr.appendChild(td);
+    });
+
+    const ls=el('select','mini');
+    [['both','两层'],['nginx','应用层'],['nft','网络层']].forEach(([v,l])=>{
+      const o=el('option',null,l);o.value=v;
+      if((r.layer||'both')===v)o.selected=true;
+      ls.appendChild(o);
+    });
+    const tdL=el('td');tdL.appendChild(el('span','lbl','层'));tdL.appendChild(ls);tr.appendChild(tdL);
+
+    const act=el('td');act.style.textAlign='right';act.style.whiteSpace='nowrap';
+    const save=el('button','btn primary','保存');
+    save.onclick=()=>{
+      save.disabled=true;
+      api('policy.rule',{id:r.id,patch:{name:nm.value,window:+w.value,
+        threshold:+th.value,hours:+h.value,layer:ls.value}})
+        .then(d=>{toast(d.result.msg);renderPolicy(d.data);})
+        .catch(e=>{toast(e.message,true);save.disabled=false;});
+    };
+    act.appendChild(save);
+    act.appendChild(document.createTextNode(' '));
+    const tg=el('button','btn'+(r.enabled?'':' primary'),r.enabled?'停用':'启用');
+    tg.onclick=()=>api('policy.rule',{id:r.id,patch:{enabled:!r.enabled}})
+      .then(d=>{toast(d.result.msg);renderPolicy(d.data);})
+      .catch(e=>toast(e.message,true));
+    act.appendChild(tg);
+    tr.appendChild(act);
+    t.appendChild(tr);
+  });
+}
+
+function renderWhitelist(wl){
+  const box=document.getElementById('pol-wl');box.innerHTML='';
+  if(!wl.length){box.appendChild(el('div','empty','白名单为空'));return;}
+  wl.forEach(ip=>{
+    const chip=el('span','wlchip');
+    chip.appendChild(document.createTextNode(ip));
+    const b=el('button',null,'×');b.title='移除';
+    b.onclick=()=>api('policy.whitelist',{op:'remove',ip})
+      .then(d=>{toast(d.result.msg);renderPolicy(d.data);})
+      .catch(e=>toast(e.message,true));
+    chip.appendChild(b);box.appendChild(chip);
+  });
+}
+
+function renderBans(bans){
+  const box=document.getElementById('pol-bans');box.innerHTML='';
+  if(!bans.length){box.appendChild(el('div','empty','还没有封禁记录'));return;}
+  const t=el('table');
+  t.appendChild(row(['时间','IP','地区','时长','方式','原因'],'th',[2,3,5]));
+  bans.forEach(b=>{
+    const tr=el('tr');
+    tr.appendChild(el('td','mono',ts2str(b.ts)));
+    const cIp=el('td');cIp.appendChild(ipSpan(b.ip,{cls:'banned'}));tr.appendChild(cIp);
+    const cg=el('td','geo',b.geo||'—');cg.title=b.geo||'';tr.appendChild(cg);
+    tr.appendChild(el('td',null,b.hours?b.hours+' 小时':'永久'));
+    const m=el('td');
+    m.appendChild(el('span','pill'+(b.mode==='auto'?' off':''),
+      b.mode==='auto'?'自动':(b.mode==='dry'?'演练':'手动')));
+    tr.appendChild(m);
+    const cr=el('td','geo',b.reason||'');cr.title=b.reason||'';tr.appendChild(cr);
+    t.appendChild(tr);
+  });
+  box.appendChild(t);
+}
+
+function renderPolicyResult(res){
+  const box=document.getElementById('pol-result');box.innerHTML='';
+  if(!res)return;
+  box.appendChild(el('div','hint',res.msg||''));
+  const banned=res.banned||[];
+  if(banned.length){
+    const t=el('table');t.style.marginTop='8px';
+    t.appendChild(row(['IP','命中','次数','时长','地区','说明'],'th',[4,5]));
+    banned.forEach(x=>{
+      const tr=el('tr');
+      const cIp=el('td');cIp.appendChild(ipSpan(x.ip));tr.appendChild(cIp);
+      tr.appendChild(el('td',null,(x.rules||[]).map(r=>r.name).join('、')));
+      tr.appendChild(el('td','n',String(x.hits)));
+      tr.appendChild(el('td',null,x.hours?x.hours+' 小时':'永久'));
+      tr.appendChild(el('td','geo',x.geo||'—'));
+      tr.appendChild(el('td','geo',x.reason||''));
+      t.appendChild(tr);
+    });
+    box.appendChild(t);
+  }
+  const sk=res.skipped||[];
+  if(sk.length){
+    box.appendChild(el('div','hint','跳过 '+sk.length+' 个：'+
+      sk.slice(0,5).map(x=>x.ip+'（'+x.why+'）').join('，')));
+  }
+}
+
+function runPolicy(apply,btn){
+  if(apply&&!confirm('立即执行会按当前规则真实封禁 IP（受单次上限约束）。\n\n确定继续？'))return;
+  btn.disabled=true;
+  api('policy.run',{apply})
+    .then(d=>{
+      toast(d.result.msg);
+      renderPolicy(d.data);
+      renderPolicyResult(d.result.result);
+    })
+    .catch(e=>toast(e.message,true))
+    .finally(()=>{btn.disabled=false;});
+}
+
+document.getElementById('polPreview').onclick=()=>
+  runPolicy(false,document.getElementById('polPreview'));
+document.getElementById('polApply').onclick=()=>
+  runPolicy(true,document.getElementById('polApply'));
+
+document.getElementById('wlBtn').onclick=()=>{
+  const v=document.getElementById('wlIp').value.trim();
+  if(!v){toast('请填写 IP 或网段',true);return;}
+  api('policy.whitelist',{op:'add',ip:v})
+    .then(d=>{
+      toast(d.result.msg);
+      document.getElementById('wlIp').value='';
+      renderPolicy(d.data);
+    })
+    .catch(e=>toast(e.message,true));
+};
+
+buildRangebars();
+tick();setInterval(tick,15000);
+loadRange(curRange);
+/* 先拿一次封禁名单：面板首帧就能把「已封禁」标出来 */
+refreshBans().then(()=>{if(lastSnap)applySources(lastSnap);});
+
+/* 三家态势视图共用一份区间数据：停在这三个视图里就每分钟刷一次，
+   切到管理/策略就停，省得白跑 SQL。 */
+setInterval(()=>{
+  if(!rangeReady)return;
+  const on=document.querySelector('.pane.on[data-pane^="mon."]');
+  if(!on)return;
+  fetch('/api/range?range='+encodeURIComponent(curRange),{credentials:'same-origin'})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j||!j.ok)return;
+      if(j.data.snap&&j.data.snap.banned)setBanMap(j.data.snap.banned);
+      applySeries(j.data.series);
+      applySources(j.data.snap);
+      applyRisk(j.data.snap);
+    })
+    .catch(()=>{});
+},60000);
+
+/* 管理页停留时也刷新，端口保险丝倒计时才会走 */
+setInterval(()=>{
+  if(!adminLoaded)return;
+  if(document.getElementById('page-adm').className.includes('hide'))return;
+  renderAdminRefresh();
+},15000);
+</script>
+</body>
+</html>

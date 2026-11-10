@@ -1,0 +1,8 @@
+# 全部按 LF 存储和检出。
+# 原因：deploy/deploy.py 是原样上传文件内容到 Linux 的，
+# 如果 unit 文件带上 \r，systemd 会把 "\r" 当成 ExecStart 命令的一部分而报错。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.db binary

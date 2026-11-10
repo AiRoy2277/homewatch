@@ -1,0 +1,18 @@
+[Unit]
+Description=HomeWatch admin API (Unix socket, 供面板调用)
+After=network.target
+Before=nginx.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/homewatch/hw.py admin --sock /run/homewatch/admin.sock
+Restart=always
+RestartSec=3
+# /run/homewatch 由 systemd 代管，服务停了自动清理。
+# 目录必须是 0755：nginx 的 worker 以 www-data 运行，需要有进入目录的 x 权限
+# 才能 connect 到 socket。真正的访问控制靠 socket 本身的 0660 root:www-data。
+RuntimeDirectory=homewatch
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
