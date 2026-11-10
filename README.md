@@ -4,39 +4,55 @@
 
 **[▶ 在线说明页](https://airoy2277.github.io/homewatch/)** ｜ [快速开始](#快速开始) ｜ [部署手册](docs/ops.md) ｜ [版本记录](CHANGELOG.md) ｜ [MIT](LICENSE)
 
-[![HomeWatch · 自建的公网入口监控与自动封禁](docs/assets/hero.png)](https://airoy2277.github.io/homewatch/)
+[![HomeWatch —— 自建的公网入口监控与自动封禁](docs/assets/hero-light.png)](https://airoy2277.github.io/homewatch/)
+
+<sub>Python 3 · 零第三方依赖 · 单页前端 · 数据不出内网</sub>
 
 </div>
 
+---
 
 家里那台机器挂在公网上的入口，被扫了多少、被谁扫、有没有真的被读走东西 —— 一个页面看完。
 
-平时只读，需要处置时可以在页面上直接关端口、关 SSH、封 IP；
-可疑 IP 由策略引擎每分钟自动评估、自动封禁。
+平时只读；需要处置时在页面上点一下，就能关端口、关 SSH、封 IP。可疑来源由策略引擎每分钟自动评估，够阈值才动手。
 
-封禁默认是**静默**的：回 `444` 直接断开连接，扫描器什么也拿不到；
-愿意的话还能一键推到 Cloudflare 边缘，让请求连源站都到不了。
+封禁默认是静默的：回 `444` 直接断开，扫描器什么都拿不到。愿意的话还能一键推到 Cloudflare 边缘，让请求连源站都到不了。
 
-整个系统由四块组成：
+## 一分钟看懂
 
-```
-nginx access.log ─┐
-nftables 计数器  ─┼→ 每分钟采集 → SQLite → 策略评估 → 自动封禁（nft + nginx + CF 边缘）
-journald (ssh)   ─┘                    └→ 归属地补全 → 渲染 index.html + data.json → 局域网面板
-```
+![24 小时请求量](docs/assets/traffic.png)
 
-## 它解决什么问题
+三条线就够了：蓝色是一直在被扫，橙色是被挡在门外，**红色虚线是真的被读走了东西**。红色长期贴地，就是你要的状态。
 
-公网暴露的机器每天被扫几千到几万次，但真正需要你关心的只有三件事：
+## 它是怎么跑的
 
-1. **有没有东西真的被读走了** —— 不是"被请求了"，而是"返回了真实内容"；
-2. **是不是正在被打** —— 现在这一刻的强度；
-3. **打了多久、从哪来、在找什么** —— 用于判断是不是同一批人又回来了。
+![数据流水线](docs/assets/arch.png)
 
-HomeWatch 就把这三件事做成一眼能看的红黄绿。
+三个来源每分钟读一次 → SQLite → 策略引擎评分 → 够阈值就封。封禁落到三层：`nftables` 丢包、`nginx` 回 444、Cloudflare 边缘拦截，可分别开关。
 
-> 想先看看它长什么样：打开在线说明页 <https://airoy2277.github.io/homewatch/>，
-> 或者本地直接开 [`docs/index.html`](docs/index.html)。
+## 面板长什么样
+
+![面板](docs/assets/panel.png)
+
+打开就是一个只读的态势页。每个 IP 出现的地方都带封禁状态，也能就地一键封；右侧是自己的端口与策略，改完即刻生效。
+
+## 请求从哪来
+
+![来源分布](docs/assets/sources.png)
+
+归属地由本机离线库补全，不外发任何查询。同一批人换个 IP 回来时，能一眼认出是哪些地区在反复试。
+
+## 境外 IP
+
+![地域封锁](docs/assets/geo-light.png)
+
+判断全在 `nftables` 里做：闸门 → 自己的白名单 → 中国网段，命中就丢，不经过任何在线接口。入站与出站分开开关，误封时关闸门即恢复，不用改规则。
+
+## 命令行
+
+![命令行状态](docs/assets/cli.png)
+
+面板挂了、或者懒得开浏览器时用的自救通道，和面板走同一套代码。
 
 ## 快速开始
 
@@ -49,7 +65,7 @@ python hw.py -c config.example.json run  # 采集 + 渲染
 python hw.py status                      # 命令行看状态
 ```
 
-本地调试时用 `HOMEWATCH_ROOT` 把所有路径重定向到沙箱目录，避免写 `/var/lib`：
+调试时用 `HOMEWATCH_ROOT` 把路径全重定向到沙箱，避免写 `/var/lib`：
 
 ```bash
 HOMEWATCH_ROOT=./.test python hw.py -c config.example.json run
@@ -60,29 +76,32 @@ HOMEWATCH_ROOT=./.test python hw.py -c config.example.json run
 
 ```bash
 pip install paramiko
-export HOMEWATCH_HOST=192.168.1.10          # 服务器的内网地址（也可写进 .env）
+export HOMEWATCH_HOST=192.168.1.10                  # 服务器的内网地址（也可写进 .env）
 SSH_PW='你的密码' python deploy/deploy.py push      # 只更新代码并试跑
 SSH_PW='你的密码' python deploy/deploy.py install   # 首次安装 / 大版本升级
 ```
 
-`install` 会做五件事：装采集定时器和管理服务、生成面板登录凭据、更新 nginx 站点、
-把 nftables 升级成集合结构（带 4 分钟自动回滚保险丝）。
+`install` 会做五件事：装采集定时器和管理服务、生成面板登录凭据、更新 nginx 站点、把 nftables 升级成集合结构（带 4 分钟自动回滚保险丝）。
 
 首次安装会打印一次管理员密码（只打印这一次）：
 
-```
+```text
   用户名：admin
   密码：  xxxxxxxxxxxxxxxxxxxx
 ```
 
-也可以自己指定：`HOMEWATCH_ADMIN_PASSWORD='你的密码' ... install`。
-密码存在 `/etc/nginx/.htpasswd.homewatch`，要重置可以删掉它再跑一次 `install`，
-或者**在面板「管理 → 面板登录」里直接改**（`hw.py auth passwd` 也行），不用重装。
+也可以自己指定 `HOMEWATCH_ADMIN_PASSWORD='你的密码' ... install`；事后要改，在面板「管理 → 面板登录」里改，或者 `hw.py auth passwd`，不用重装。
 
-`push` 只覆盖代码，**不会动线上的 `config.json`**。改动配置请直接编辑服务器上的
-`/opt/homewatch/config.json`，下一次 timer 触发即生效，不需要重启。
+`push` 只覆盖代码，**不会动线上的 `config.json`**。改配置直接编辑服务器上的 `/opt/homewatch/config.json`，下一次 timer 触发即生效，不需要重启。
 
-## 命令
+## 再往下看
+
+细节都在折叠里，需要的时候展开；部署与故障处置在 [docs/ops.md](docs/ops.md)。
+
+<details>
+<summary><b>完整命令表</b> —— 采集、端口、服务、SSH、封禁、策略</summary>
+
+### 命令
 
 **采集类**
 
@@ -154,7 +173,12 @@ SSH_PW='你的密码' python deploy/deploy.py install   # 首次安装 / 大版�
 
 不带子命令等价于 `run`。
 
-## 管理功能
+</details>
+
+<details>
+<summary><b>管理功能</b> —— 面板上能做的每一件事</summary>
+
+### 管理功能
 
 左侧导航分三块：**态势**（看数据）、**管理**（端口 / 防火墙 / 服务 / 封禁 / 边缘 / 系统）、
 **策略**（自动封禁规则）。窄屏时导航落到页面底部，键盘 `1` `2` `3` 可以直接切页，
@@ -182,7 +206,7 @@ SSH_PW='你的密码' python deploy/deploy.py install   # 首次安装 / 大版�
 | **自动封禁** | 规则引擎每分钟评估，命中后批量下发两层 | 一分钟内 |
 | **策略配置** | 面板改阈值/时长/白名单，写回 `config.json` | 下一次采集 |
 
-### 为什么 IP 封禁要写两层
+#### 为什么 IP 封禁要写两层
 
 走 Cloudflare 进来的流量，nft 看到的源地址是 **CF 的 IP**，不是攻击者的，
 所以在网络层封攻击者 IP 对这条路完全无效。
@@ -195,7 +219,7 @@ nginx 里配了 `realip`，`$remote_addr` 已被还原成真实客户端 IP，�
 Cloudflare 三层的合并结果）：已经封了的挂一个「已封禁」小标，没封的旁边就是
 「封禁」按钮，点一下三层一起封，再点一次解封。
 
-### 地域封锁为什么不查归属地
+#### 地域封锁为什么不查归属地
 
 ![地域封锁：外来 / 对外两把开关](docs/assets/geo.png)
 
@@ -214,12 +238,17 @@ nft 里一个集合查找就能判定，代价是一次哈希。所以用国家�
 `add element`（每批 900 段），灌完再往闸门集合里塞 `0.0.0.0/0` 让规则一次性通电。
 闸门空着时规则不匹配任何包，所以中途失败最坏是"封锁没生效"，不会锁死自己。
 
-## 安全策略与自动封禁
+</details>
+
+<details>
+<summary><b>安全策略与自动封禁</b> —— 规则表、评分、回包、Cloudflare 边缘</summary>
+
+### 安全策略与自动封禁
 
 每分钟采集完就顺手跑一次策略评估：从聚合数据里找可疑 IP，过一遍保护名单，
 按规则自动封禁。**不需要手工盯着面板**。
 
-### 内置规则
+#### 内置规则
 
 | 规则 | 数据来源 | 默认条件 | 时长 | 下发层 |
 |---|---|---|---|---|
@@ -253,7 +282,7 @@ nft 里一个集合查找就能判定，代价是一次哈希。所以用国家�
 - **阈值不是越小越好**。`bad_ua` 把"空 UA"也算进去了，如果你的局域网里有脚本
   定时请求自己的站点，先把它加进 `own_ips` 或白名单。
 
-### 五道保护，误封优先于漏封
+#### 五道保护，误封优先于漏封
 
 自动封禁最怕封错人，所以每个候选 IP 都要先过这几关：
 
@@ -273,7 +302,7 @@ UptimeRobot 等）不会被**频率类**规则封禁——爬虫抓得快点不�
 它要是去翻 `.git` 或者发超大报文，照样封。UA 本身可以伪造，所以这只是
 "别误伤真爬虫"的便利，不是安全边界。
 
-### 先演练再开火
+#### 先演练再开火
 
 ```bash
 python3 hw.py policy dry on     # 只记录"本来会封谁"，不下发
@@ -283,7 +312,7 @@ python3 hw.py policy dry off    # 确认没问题再真正开火
 
 面板「策略」页的「演练一次」按钮等价于 `policy run`，不会改任何规则。
 
-### 一次评估做了什么
+#### 一次评估做了什么
 
 ```
 hits / paths / sshfail ──规则匹配──▶ 候选 IP ──保护名单──▶ 可封列表
@@ -297,7 +326,7 @@ hits / paths / sshfail ──规则匹配──▶ 候选 IP ──保护名单�
 批量下发是有意为之：一次封 3 个只会 reload 一次 nginx、同步一次 nft 集合，
 不会出现"封到一半规则集被刷三遍"的中间态。
 
-### 封禁怎么回包
+#### 封禁怎么回包
 
 被封的 IP 到底看到什么，是可配的（`policy.ban_mode`）：
 
@@ -336,7 +365,7 @@ hw.py policy mode visible            # 退回 402
 站点的接线状态会出现在面板提示、`policy status` 和每次评估的 warnings 里：
 状态码对不上时会直接告诉你"站点还在返回 402"。
 
-### 推到 Cloudflare 边缘
+#### 推到 Cloudflare 边缘
 
 本地封禁解决的是"请求到了我怎么回"；推到边缘解决的是"请求根本别来"。
 
@@ -374,7 +403,12 @@ hw.py cf purge       # 清全站缓存
 
 注意 token 会明文存在 `config.json` 里，所以保存时会把文件权限收到 `600`。
 
-## 访问定位
+</details>
+
+<details>
+<summary><b>访问定位与四道闸门</b></summary>
+
+### 访问定位
 
 面板上的 IP 会带上国家/城市/运营商，另有一张「来源地区」分布图。
 
@@ -385,7 +419,7 @@ hw.py cf purge       # 清全站缓存
   或配 `mmdb` 用本地 MaxMind 库（需要 `pip install maxminddb`）；
 - **不想让 IP 外发**就把 `geo.provider` 设成 `offline`：只读已有缓存，不再联网查询。
 
-## 四道闸门
+### 四道闸门
 
 写操作等于把 root 机器的控制权放到了网页上，所以限制是一层套一层的：
 
@@ -398,7 +432,7 @@ hw.py cf purge       # 清全站缓存
 每次写操作都记一条审计（时间、来源 IP、动作、参数、结果、耗时），在面板底部可查，
 文件在 `/var/log/homewatch/audit.log`。
 
-### 几个防呆
+#### 几个防呆
 
 - 封禁 `own_ips` 里的地址会被拒绝——那都是你自己，封了会失联；
 - 关闭面板自身端口（8088）会在返回结果里额外警告；
@@ -409,7 +443,12 @@ hw.py cf purge       # 清全站缓存
 - 从面板开启外来封锁时，如果操作者本身就是境外 IP 且不在豁免清单里，
   直接报错并给出服务器上执行的命令，避免"点了开关自己也进不来"。
 
-## 配置
+</details>
+
+<details>
+<summary><b>配置、数据结构与设计取舍</b></summary>
+
+### 配置
 
 默认读 `/opt/homewatch/config.json`，完整示例见 `config.example.json`。
 
@@ -445,7 +484,7 @@ hw.py cf purge       # 清全站缓存
 | `cloudflare.note` | 规则备注前缀，删除时只删带这个前缀的规则 |
 | `paths.*` | 日志、数据库、输出目录、审计、封禁名单、站点配置、面板密码文件的位置 |
 
-## 数据结构
+### 数据结构
 
 分钟级聚合，不存原始行。一天 2.7 万行日志，聚合后只有几百行。
 
@@ -462,7 +501,7 @@ hw.py cf purge       # 清全站缓存
 | `bans` | 封禁流水：谁、多久、哪条规则、自动还是手动 |
 | `meta` | 日志偏移、inode、增量时间戳、上次策略评估结果 |
 
-## 三个设计决定（都是踩过坑才这么写的）
+### 三个设计决定（都是踩过坑才这么写的）
 
 **1. 判断泄漏要比较响应体大小，不能只看状态码。**
 本站对任意路径都回 `index.html`（SPA fallback），所以 `/.env` 也是 `200`。
@@ -478,7 +517,7 @@ hw.py cf purge       # 清全站缓存
 inode 变了或文件变短（logrotate / 手工 truncate）就从头读。没有换行结尾的半行
 不入库，留到下一轮。
 
-## 部署形态
+### 部署形态
 
 - **采集**：systemd timer，每分钟一次，`Type=oneshot`，不常驻；
 - **管理接口**：`homewatch-admin.service`，常驻但只监听 `/run/homewatch/admin.sock`，
@@ -487,7 +526,7 @@ inode 变了或文件变短（logrotate / 手工 truncate）就从头读。没�
 - **权限**：采集和写操作都需要 root（读 journald、改 nftables、改密码）；
 - **暴露面**：只有 8088 一个端口，且只监听内网 IP。公网不可达。
 
-## 目录
+### 目录
 
 ```
 hw.py                       启动器（服务器上就是 /opt/homewatch/hw.py）
@@ -541,7 +580,7 @@ tools/remote.py             在线执行一条命令（读 .env 的连接信息�
 tools/mirror.py             把线上面板搬到本地端口，用于真实浏览器截图
 ```
 
-## 下一步可以做的
+### 下一步可以做的
 
 - [ ] 告警：红状态时推送到邮箱 / 企业微信，同一次攻击只发一次
 - [ ] 应急模式一键止血：关掉所有非必要端口 + 关 SSH，只留 CF 回源
@@ -553,6 +592,17 @@ tools/mirror.py             把线上面板搬到本地端口，用于真实浏�
 - [x] 防火墙规则表：有序规则 + 增删改查 + 默认策略 + 容器转发联动 + 命中计数
 - [ ] 规则组 / 定时生效：按时间段自动切换白名单（例如只在家时才开面板）
 - [ ] 导出：把某一天的数据导成 CSV / 报表
+
+</details>
+
+## 文档
+
+| 文件 | 内容 |
+|---|---|
+| [docs/ops.md](docs/ops.md) | 部署手册：安装、升级、回滚、地域封锁、故障处置 |
+| [CHANGELOG.md](CHANGELOG.md) | 每个版本改了什么 |
+| [在线说明页](https://airoy2277.github.io/homewatch/) | 一页看完它长什么样 |
+| [config.example.json](config.example.json) | 全部配置项与默认值 |
 
 ## 许可
 
