@@ -1,5 +1,14 @@
 # HomeWatch
 
+<div align="center">
+
+**[▶ 在线说明页](https://airoy2277.github.io/homewatch/)** ｜ [快速开始](#快速开始) ｜ [部署手册](docs/ops.md) ｜ [版本记录](CHANGELOG.md) ｜ [MIT](LICENSE)
+
+[![HomeWatch · 自建的公网入口监控与自动封禁](docs/assets/hero.png)](https://airoy2277.github.io/homewatch/)
+
+</div>
+
+
 家里那台机器挂在公网上的入口，被扫了多少、被谁扫、有没有真的被读走东西 —— 一个页面看完。
 
 平时只读，需要处置时可以在页面上直接关端口、关 SSH、封 IP；
@@ -26,8 +35,8 @@ journald (ssh)   ─┘                    └→ 归属地补全 → 渲染 ind
 
 HomeWatch 就把这三件事做成一眼能看的红黄绿。
 
-> 想先看看它长什么样：直接打开 [`docs/index.html`](docs/index.html)，
-> 或者开 GitHub Pages（Settings → Pages → 分支 `main`、目录 `/docs`）。
+> 想先看看它长什么样：打开在线说明页 <https://airoy2277.github.io/homewatch/>，
+> 或者本地直接开 [`docs/index.html`](docs/index.html)。
 
 ## 快速开始
 
@@ -187,6 +196,8 @@ Cloudflare 三层的合并结果）：已经封了的挂一个「已封禁」小
 「封禁」按钮，点一下三层一起封，再点一次解封。
 
 ### 地域封锁为什么不查归属地
+
+![地域封锁：外来 / 对外两把开关](docs/assets/geo.png)
 
 逐 IP 查归属地要联网、要缓存、要等接口，几万个连接的场景根本跟不上；
 nft 里一个集合查找就能判定，代价是一次哈希。所以用国家级 CIDR 清单
@@ -523,6 +534,7 @@ config.example.json         配置示例
 CHANGELOG.md                版本记录（每版改了什么）
 docs/ops.md                 运维与回滚手册
 docs/index.html             项目说明页（GitHub Pages 从这里发布）
+docs/assets/                README 用的截图
 tools/e2e_check.py          后端自检（规则渲染、防呆、落盘回读，143 项）
 tools/panel_check.js        前端自检（最小 DOM 桩跑一遍页面脚本）
 tools/remote.py             在线执行一条命令（读 .env 的连接信息）
